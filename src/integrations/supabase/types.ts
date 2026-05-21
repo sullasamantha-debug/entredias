@@ -14,7 +14,413 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      birthdays: {
+        Row: {
+          category: string | null
+          created_at: string
+          date: string
+          gift_ideas: string | null
+          id: string
+          name: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          date: string
+          gift_ideas?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          date?: string
+          gift_ideas?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      books: {
+        Row: {
+          author: string | null
+          category: string | null
+          created_at: string
+          end_date: string | null
+          id: string
+          pages: number | null
+          quotes: string | null
+          rating: number | null
+          review: string | null
+          start_date: string | null
+          status: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          author?: string | null
+          category?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          pages?: number | null
+          quotes?: string | null
+          rating?: number | null
+          review?: string | null
+          start_date?: string | null
+          status?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          author?: string | null
+          category?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          pages?: number | null
+          quotes?: string | null
+          rating?: number | null
+          review?: string | null
+          start_date?: string | null
+          status?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      diary_entries: {
+        Row: {
+          anxiety: number | null
+          content: string | null
+          created_at: string
+          date: string
+          energy: number | null
+          favorite: boolean
+          gratitude: string | null
+          id: string
+          mood: number | null
+          rating: number | null
+          tags: string[] | null
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          anxiety?: number | null
+          content?: string | null
+          created_at?: string
+          date: string
+          energy?: number | null
+          favorite?: boolean
+          gratitude?: string | null
+          id?: string
+          mood?: number | null
+          rating?: number | null
+          tags?: string[] | null
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          anxiety?: number | null
+          content?: string | null
+          created_at?: string
+          date?: string
+          energy?: number | null
+          favorite?: boolean
+          gratitude?: string | null
+          id?: string
+          mood?: number | null
+          rating?: number | null
+          tags?: string[] | null
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      events: {
+        Row: {
+          completed: boolean
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          time_str: string | null
+          title: string
+          type: string | null
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          date: string
+          description?: string | null
+          id?: string
+          time_str?: string | null
+          title: string
+          type?: string | null
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          time_str?: string | null
+          title?: string
+          type?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      goals: {
+        Row: {
+          completed: boolean
+          created_at: string
+          description: string | null
+          id: string
+          progress: number | null
+          target: number | null
+          title: string
+          user_id: string
+          year: number | null
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          progress?: number | null
+          target?: number | null
+          title: string
+          user_id: string
+          year?: number | null
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          progress?: number | null
+          target?: number | null
+          title?: string
+          user_id?: string
+          year?: number | null
+        }
+        Relationships: []
+      }
+      habit_logs: {
+        Row: {
+          date: string
+          done: boolean
+          habit_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          date: string
+          done?: boolean
+          habit_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          date?: string
+          done?: boolean
+          habit_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_logs_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habits: {
+        Row: {
+          archived: boolean
+          color: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          archived?: boolean
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          archived?: boolean
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      movies: {
+        Row: {
+          created_at: string
+          favorite: boolean
+          genre: string | null
+          id: string
+          name: string
+          platform: string | null
+          rating: number | null
+          review: string | null
+          user_id: string
+          watched_date: string | null
+        }
+        Insert: {
+          created_at?: string
+          favorite?: boolean
+          genre?: string | null
+          id?: string
+          name: string
+          platform?: string | null
+          rating?: number | null
+          review?: string | null
+          user_id: string
+          watched_date?: string | null
+        }
+        Update: {
+          created_at?: string
+          favorite?: boolean
+          genre?: string | null
+          id?: string
+          name?: string
+          platform?: string | null
+          rating?: number | null
+          review?: string | null
+          user_id?: string
+          watched_date?: string | null
+        }
+        Relationships: []
+      }
+      podcasts: {
+        Row: {
+          category: string | null
+          created_at: string
+          date: string | null
+          duration_min: number | null
+          episode: string | null
+          favorite: boolean
+          id: string
+          name: string
+          notes: string | null
+          rating: number | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          date?: string | null
+          duration_min?: number | null
+          episode?: string | null
+          favorite?: boolean
+          id?: string
+          name: string
+          notes?: string | null
+          rating?: number | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          date?: string | null
+          duration_min?: number | null
+          episode?: string | null
+          favorite?: boolean
+          id?: string
+          name?: string
+          notes?: string | null
+          rating?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      series: {
+        Row: {
+          created_at: string
+          episodes_watched: number | null
+          id: string
+          name: string
+          platform: string | null
+          rating: number | null
+          review: string | null
+          season: number | null
+          status: string | null
+          total_episodes: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          episodes_watched?: number | null
+          id?: string
+          name: string
+          platform?: string | null
+          rating?: number | null
+          review?: string | null
+          season?: number | null
+          status?: string | null
+          total_episodes?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          episodes_watched?: number | null
+          id?: string
+          name?: string
+          platform?: string | null
+          rating?: number | null
+          review?: string | null
+          season?: number | null
+          status?: string | null
+          total_episodes?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
