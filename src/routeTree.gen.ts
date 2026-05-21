@@ -12,9 +12,16 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppSeriesRouteImport } from './routes/_app/series'
+import { Route as AppPodcastsRouteImport } from './routes/_app/podcasts'
+import { Route as AppMetasRouteImport } from './routes/_app/metas'
+import { Route as AppLivrosRouteImport } from './routes/_app/livros'
 import { Route as AppHabitosRouteImport } from './routes/_app/habitos'
+import { Route as AppFilmesRouteImport } from './routes/_app/filmes'
 import { Route as AppDiarioRouteImport } from './routes/_app/diario'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppAniversariosRouteImport } from './routes/_app/aniversarios'
+import { Route as AppAgendaRouteImport } from './routes/_app/agenda'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -30,9 +37,34 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppSeriesRoute = AppSeriesRouteImport.update({
+  id: '/series',
+  path: '/series',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPodcastsRoute = AppPodcastsRouteImport.update({
+  id: '/podcasts',
+  path: '/podcasts',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMetasRoute = AppMetasRouteImport.update({
+  id: '/metas',
+  path: '/metas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLivrosRoute = AppLivrosRouteImport.update({
+  id: '/livros',
+  path: '/livros',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppHabitosRoute = AppHabitosRouteImport.update({
   id: '/habitos',
   path: '/habitos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFilmesRoute = AppFilmesRouteImport.update({
+  id: '/filmes',
+  path: '/filmes',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDiarioRoute = AppDiarioRouteImport.update({
@@ -45,43 +77,105 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAniversariosRoute = AppAniversariosRouteImport.update({
+  id: '/aniversarios',
+  path: '/aniversarios',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAgendaRoute = AppAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/agenda': typeof AppAgendaRoute
+  '/aniversarios': typeof AppAniversariosRoute
   '/dashboard': typeof AppDashboardRoute
   '/diario': typeof AppDiarioRoute
+  '/filmes': typeof AppFilmesRoute
   '/habitos': typeof AppHabitosRoute
+  '/livros': typeof AppLivrosRoute
+  '/metas': typeof AppMetasRoute
+  '/podcasts': typeof AppPodcastsRoute
+  '/series': typeof AppSeriesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/agenda': typeof AppAgendaRoute
+  '/aniversarios': typeof AppAniversariosRoute
   '/dashboard': typeof AppDashboardRoute
   '/diario': typeof AppDiarioRoute
+  '/filmes': typeof AppFilmesRoute
   '/habitos': typeof AppHabitosRoute
+  '/livros': typeof AppLivrosRoute
+  '/metas': typeof AppMetasRoute
+  '/podcasts': typeof AppPodcastsRoute
+  '/series': typeof AppSeriesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/_app/agenda': typeof AppAgendaRoute
+  '/_app/aniversarios': typeof AppAniversariosRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/diario': typeof AppDiarioRoute
+  '/_app/filmes': typeof AppFilmesRoute
   '/_app/habitos': typeof AppHabitosRoute
+  '/_app/livros': typeof AppLivrosRoute
+  '/_app/metas': typeof AppMetasRoute
+  '/_app/podcasts': typeof AppPodcastsRoute
+  '/_app/series': typeof AppSeriesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/dashboard' | '/diario' | '/habitos'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/agenda'
+    | '/aniversarios'
+    | '/dashboard'
+    | '/diario'
+    | '/filmes'
+    | '/habitos'
+    | '/livros'
+    | '/metas'
+    | '/podcasts'
+    | '/series'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/dashboard' | '/diario' | '/habitos'
+  to:
+    | '/'
+    | '/login'
+    | '/agenda'
+    | '/aniversarios'
+    | '/dashboard'
+    | '/diario'
+    | '/filmes'
+    | '/habitos'
+    | '/livros'
+    | '/metas'
+    | '/podcasts'
+    | '/series'
   id:
     | '__root__'
     | '/'
     | '/_app'
     | '/login'
+    | '/_app/agenda'
+    | '/_app/aniversarios'
     | '/_app/dashboard'
     | '/_app/diario'
+    | '/_app/filmes'
     | '/_app/habitos'
+    | '/_app/livros'
+    | '/_app/metas'
+    | '/_app/podcasts'
+    | '/_app/series'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -113,11 +207,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/series': {
+      id: '/_app/series'
+      path: '/series'
+      fullPath: '/series'
+      preLoaderRoute: typeof AppSeriesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/podcasts': {
+      id: '/_app/podcasts'
+      path: '/podcasts'
+      fullPath: '/podcasts'
+      preLoaderRoute: typeof AppPodcastsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/metas': {
+      id: '/_app/metas'
+      path: '/metas'
+      fullPath: '/metas'
+      preLoaderRoute: typeof AppMetasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/livros': {
+      id: '/_app/livros'
+      path: '/livros'
+      fullPath: '/livros'
+      preLoaderRoute: typeof AppLivrosRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/habitos': {
       id: '/_app/habitos'
       path: '/habitos'
       fullPath: '/habitos'
       preLoaderRoute: typeof AppHabitosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/filmes': {
+      id: '/_app/filmes'
+      path: '/filmes'
+      fullPath: '/filmes'
+      preLoaderRoute: typeof AppFilmesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/diario': {
@@ -134,19 +263,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/aniversarios': {
+      id: '/_app/aniversarios'
+      path: '/aniversarios'
+      fullPath: '/aniversarios'
+      preLoaderRoute: typeof AppAniversariosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/agenda': {
+      id: '/_app/agenda'
+      path: '/agenda'
+      fullPath: '/agenda'
+      preLoaderRoute: typeof AppAgendaRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppAgendaRoute: typeof AppAgendaRoute
+  AppAniversariosRoute: typeof AppAniversariosRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDiarioRoute: typeof AppDiarioRoute
+  AppFilmesRoute: typeof AppFilmesRoute
   AppHabitosRoute: typeof AppHabitosRoute
+  AppLivrosRoute: typeof AppLivrosRoute
+  AppMetasRoute: typeof AppMetasRoute
+  AppPodcastsRoute: typeof AppPodcastsRoute
+  AppSeriesRoute: typeof AppSeriesRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAgendaRoute: AppAgendaRoute,
+  AppAniversariosRoute: AppAniversariosRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDiarioRoute: AppDiarioRoute,
+  AppFilmesRoute: AppFilmesRoute,
   AppHabitosRoute: AppHabitosRoute,
+  AppLivrosRoute: AppLivrosRoute,
+  AppMetasRoute: AppMetasRoute,
+  AppPodcastsRoute: AppPodcastsRoute,
+  AppSeriesRoute: AppSeriesRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -159,3 +316,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
