@@ -121,7 +121,7 @@ function HabitosPage() {
               <motion.div key={h.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} className="cozy-card p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-2xl" style={{ background: h.color }} />
+                    <div className="h-10 w-10 rounded-2xl" style={{ background: h.color ?? "#7dd3fc" }} />
                     <div>
                       <div className="font-display text-lg">{h.name}</div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -143,7 +143,7 @@ function HabitosPage() {
                         className={`group flex aspect-square flex-col items-center justify-center rounded-xl border text-[10px] transition ${
                           done ? "border-transparent text-white" : "border-border text-muted-foreground hover:border-primary"
                         }`}
-                        style={done ? { background: h.color } : undefined}
+                        style={done ? { background: h.color ?? "#7dd3fc" } : undefined}
                         title={k}>
                         <span>{format(d, "EEEEE")}</span>
                         <span className="font-display text-sm leading-none">{format(d, "d")}</span>
