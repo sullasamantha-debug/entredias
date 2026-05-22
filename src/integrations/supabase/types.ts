@@ -60,6 +60,7 @@ export type Database = {
           review: string | null
           start_date: string | null
           status: string | null
+          tags: string[] | null
           title: string
           user_id: string
         }
@@ -75,6 +76,7 @@ export type Database = {
           review?: string | null
           start_date?: string | null
           status?: string | null
+          tags?: string[] | null
           title: string
           user_id: string
         }
@@ -90,6 +92,7 @@ export type Database = {
           review?: string | null
           start_date?: string | null
           status?: string | null
+          tags?: string[] | null
           title?: string
           user_id?: string
         }
@@ -175,6 +178,51 @@ export type Database = {
           time_str?: string | null
           title?: string
           type?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      finances: {
+        Row: {
+          amount: number
+          category: string | null
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          installments: number | null
+          kind: string
+          notes: string | null
+          payment_method: string | null
+          tags: string[] | null
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          category?: string | null
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          installments?: number | null
+          kind?: string
+          notes?: string | null
+          payment_method?: string | null
+          tags?: string[] | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          installments?: number | null
+          kind?: string
+          notes?: string | null
+          payment_method?: string | null
+          tags?: string[] | null
           user_id?: string
         }
         Relationships: []
@@ -287,6 +335,7 @@ export type Database = {
           platform: string | null
           rating: number | null
           review: string | null
+          tags: string[] | null
           user_id: string
           watched_date: string | null
         }
@@ -299,6 +348,7 @@ export type Database = {
           platform?: string | null
           rating?: number | null
           review?: string | null
+          tags?: string[] | null
           user_id: string
           watched_date?: string | null
         }
@@ -311,8 +361,92 @@ export type Database = {
           platform?: string | null
           rating?: number | null
           review?: string | null
+          tags?: string[] | null
           user_id?: string
           watched_date?: string | null
+        }
+        Relationships: []
+      }
+      podcast_episodes: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          favorite: boolean
+          id: string
+          listened_date: string | null
+          notes: string | null
+          rating: number | null
+          show_id: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          favorite?: boolean
+          id?: string
+          listened_date?: string | null
+          notes?: string | null
+          rating?: number | null
+          show_id: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          favorite?: boolean
+          id?: string
+          listened_date?: string | null
+          notes?: string | null
+          rating?: number | null
+          show_id?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "podcast_episodes_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "podcast_shows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      podcast_shows: {
+        Row: {
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          favorite: boolean
+          id: string
+          name: string
+          platform: string | null
+          tags: string[] | null
+          user_id: string
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          favorite?: boolean
+          id?: string
+          name: string
+          platform?: string | null
+          tags?: string[] | null
+          user_id: string
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          favorite?: boolean
+          id?: string
+          name?: string
+          platform?: string | null
+          tags?: string[] | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -382,40 +516,49 @@ export type Database = {
       series: {
         Row: {
           created_at: string
+          end_date: string | null
           episodes_watched: number | null
           id: string
+          kind: string | null
           name: string
           platform: string | null
           rating: number | null
           review: string | null
           season: number | null
           status: string | null
+          tags: string[] | null
           total_episodes: number | null
           user_id: string
         }
         Insert: {
           created_at?: string
+          end_date?: string | null
           episodes_watched?: number | null
           id?: string
+          kind?: string | null
           name: string
           platform?: string | null
           rating?: number | null
           review?: string | null
           season?: number | null
           status?: string | null
+          tags?: string[] | null
           total_episodes?: number | null
           user_id: string
         }
         Update: {
           created_at?: string
+          end_date?: string | null
           episodes_watched?: number | null
           id?: string
+          kind?: string | null
           name?: string
           platform?: string | null
           rating?: number | null
           review?: string | null
           season?: number | null
           status?: string | null
+          tags?: string[] | null
           total_episodes?: number | null
           user_id?: string
         }
