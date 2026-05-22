@@ -17,6 +17,7 @@ import { Route as AppPodcastsRouteImport } from './routes/_app/podcasts'
 import { Route as AppMetasRouteImport } from './routes/_app/metas'
 import { Route as AppLivrosRouteImport } from './routes/_app/livros'
 import { Route as AppHabitosRouteImport } from './routes/_app/habitos'
+import { Route as AppFinancasRouteImport } from './routes/_app/financas'
 import { Route as AppFilmesRouteImport } from './routes/_app/filmes'
 import { Route as AppDiarioRouteImport } from './routes/_app/diario'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
@@ -63,6 +64,11 @@ const AppHabitosRoute = AppHabitosRouteImport.update({
   path: '/habitos',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFinancasRoute = AppFinancasRouteImport.update({
+  id: '/financas',
+  path: '/financas',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppFilmesRoute = AppFilmesRouteImport.update({
   id: '/filmes',
   path: '/filmes',
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/diario': typeof AppDiarioRoute
   '/filmes': typeof AppFilmesRoute
+  '/financas': typeof AppFinancasRoute
   '/habitos': typeof AppHabitosRoute
   '/livros': typeof AppLivrosRoute
   '/metas': typeof AppMetasRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/diario': typeof AppDiarioRoute
   '/filmes': typeof AppFilmesRoute
+  '/financas': typeof AppFinancasRoute
   '/habitos': typeof AppHabitosRoute
   '/livros': typeof AppLivrosRoute
   '/metas': typeof AppMetasRoute
@@ -134,6 +142,7 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/diario': typeof AppDiarioRoute
   '/_app/filmes': typeof AppFilmesRoute
+  '/_app/financas': typeof AppFinancasRoute
   '/_app/habitos': typeof AppHabitosRoute
   '/_app/livros': typeof AppLivrosRoute
   '/_app/metas': typeof AppMetasRoute
@@ -151,6 +160,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/diario'
     | '/filmes'
+    | '/financas'
     | '/habitos'
     | '/livros'
     | '/metas'
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/diario'
     | '/filmes'
+    | '/financas'
     | '/habitos'
     | '/livros'
     | '/metas'
@@ -182,6 +193,7 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/diario'
     | '/_app/filmes'
+    | '/_app/financas'
     | '/_app/habitos'
     | '/_app/livros'
     | '/_app/metas'
@@ -254,6 +266,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppHabitosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/financas': {
+      id: '/_app/financas'
+      path: '/financas'
+      fullPath: '/financas'
+      preLoaderRoute: typeof AppFinancasRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/filmes': {
       id: '/_app/filmes'
       path: '/filmes'
@@ -317,6 +336,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppDiarioRoute: typeof AppDiarioRoute
   AppFilmesRoute: typeof AppFilmesRoute
+  AppFinancasRoute: typeof AppFinancasRoute
   AppHabitosRoute: typeof AppHabitosRoute
   AppLivrosRoute: typeof AppLivrosRoute
   AppMetasRoute: typeof AppMetasRoute
@@ -330,6 +350,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppDiarioRoute: AppDiarioRoute,
   AppFilmesRoute: AppFilmesRoute,
+  AppFinancasRoute: AppFinancasRoute,
   AppHabitosRoute: AppHabitosRoute,
   AppLivrosRoute: AppLivrosRoute,
   AppMetasRoute: AppMetasRoute,
