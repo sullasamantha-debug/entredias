@@ -19,6 +19,7 @@ import { Route as AppLivrosRouteImport } from './routes/_app/livros'
 import { Route as AppHabitosRouteImport } from './routes/_app/habitos'
 import { Route as AppFinancasRouteImport } from './routes/_app/financas'
 import { Route as AppFilmesRouteImport } from './routes/_app/filmes'
+import { Route as AppExportarRouteImport } from './routes/_app/exportar'
 import { Route as AppDiarioRouteImport } from './routes/_app/diario'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppAniversariosRouteImport } from './routes/_app/aniversarios'
@@ -74,6 +75,11 @@ const AppFilmesRoute = AppFilmesRouteImport.update({
   path: '/filmes',
   getParentRoute: () => AppRoute,
 } as any)
+const AppExportarRoute = AppExportarRouteImport.update({
+  id: '/exportar',
+  path: '/exportar',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDiarioRoute = AppDiarioRouteImport.update({
   id: '/diario',
   path: '/diario',
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/aniversarios': typeof AppAniversariosRoute
   '/dashboard': typeof AppDashboardRoute
   '/diario': typeof AppDiarioRoute
+  '/exportar': typeof AppExportarRoute
   '/filmes': typeof AppFilmesRoute
   '/financas': typeof AppFinancasRoute
   '/habitos': typeof AppHabitosRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/aniversarios': typeof AppAniversariosRoute
   '/dashboard': typeof AppDashboardRoute
   '/diario': typeof AppDiarioRoute
+  '/exportar': typeof AppExportarRoute
   '/filmes': typeof AppFilmesRoute
   '/financas': typeof AppFinancasRoute
   '/habitos': typeof AppHabitosRoute
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/_app/aniversarios': typeof AppAniversariosRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/diario': typeof AppDiarioRoute
+  '/_app/exportar': typeof AppExportarRoute
   '/_app/filmes': typeof AppFilmesRoute
   '/_app/financas': typeof AppFinancasRoute
   '/_app/habitos': typeof AppHabitosRoute
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/aniversarios'
     | '/dashboard'
     | '/diario'
+    | '/exportar'
     | '/filmes'
     | '/financas'
     | '/habitos'
@@ -175,6 +185,7 @@ export interface FileRouteTypes {
     | '/aniversarios'
     | '/dashboard'
     | '/diario'
+    | '/exportar'
     | '/filmes'
     | '/financas'
     | '/habitos'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/_app/aniversarios'
     | '/_app/dashboard'
     | '/_app/diario'
+    | '/_app/exportar'
     | '/_app/filmes'
     | '/_app/financas'
     | '/_app/habitos'
@@ -280,6 +292,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFilmesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/exportar': {
+      id: '/_app/exportar'
+      path: '/exportar'
+      fullPath: '/exportar'
+      preLoaderRoute: typeof AppExportarRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/diario': {
       id: '/_app/diario'
       path: '/diario'
@@ -335,6 +354,7 @@ interface AppRouteChildren {
   AppAniversariosRoute: typeof AppAniversariosRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDiarioRoute: typeof AppDiarioRoute
+  AppExportarRoute: typeof AppExportarRoute
   AppFilmesRoute: typeof AppFilmesRoute
   AppFinancasRoute: typeof AppFinancasRoute
   AppHabitosRoute: typeof AppHabitosRoute
@@ -349,6 +369,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAniversariosRoute: AppAniversariosRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDiarioRoute: AppDiarioRoute,
+  AppExportarRoute: AppExportarRoute,
   AppFilmesRoute: AppFilmesRoute,
   AppFinancasRoute: AppFinancasRoute,
   AppHabitosRoute: AppHabitosRoute,
