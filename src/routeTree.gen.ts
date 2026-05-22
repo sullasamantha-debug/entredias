@@ -17,11 +17,14 @@ import { Route as AppPodcastsRouteImport } from './routes/_app/podcasts'
 import { Route as AppMetasRouteImport } from './routes/_app/metas'
 import { Route as AppLivrosRouteImport } from './routes/_app/livros'
 import { Route as AppHabitosRouteImport } from './routes/_app/habitos'
+import { Route as AppFinancasRouteImport } from './routes/_app/financas'
 import { Route as AppFilmesRouteImport } from './routes/_app/filmes'
+import { Route as AppExportarRouteImport } from './routes/_app/exportar'
 import { Route as AppDiarioRouteImport } from './routes/_app/diario'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppAniversariosRouteImport } from './routes/_app/aniversarios'
 import { Route as AppAgendaRouteImport } from './routes/_app/agenda'
+import { Route as AppPodcastsShowIdRouteImport } from './routes/_app/podcasts.$showId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -62,9 +65,19 @@ const AppHabitosRoute = AppHabitosRouteImport.update({
   path: '/habitos',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFinancasRoute = AppFinancasRouteImport.update({
+  id: '/financas',
+  path: '/financas',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppFilmesRoute = AppFilmesRouteImport.update({
   id: '/filmes',
   path: '/filmes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppExportarRoute = AppExportarRouteImport.update({
+  id: '/exportar',
+  path: '/exportar',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDiarioRoute = AppDiarioRouteImport.update({
@@ -87,6 +100,11 @@ const AppAgendaRoute = AppAgendaRouteImport.update({
   path: '/agenda',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPodcastsShowIdRoute = AppPodcastsShowIdRouteImport.update({
+  id: '/$showId',
+  path: '/$showId',
+  getParentRoute: () => AppPodcastsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -95,12 +113,15 @@ export interface FileRoutesByFullPath {
   '/aniversarios': typeof AppAniversariosRoute
   '/dashboard': typeof AppDashboardRoute
   '/diario': typeof AppDiarioRoute
+  '/exportar': typeof AppExportarRoute
   '/filmes': typeof AppFilmesRoute
+  '/financas': typeof AppFinancasRoute
   '/habitos': typeof AppHabitosRoute
   '/livros': typeof AppLivrosRoute
   '/metas': typeof AppMetasRoute
-  '/podcasts': typeof AppPodcastsRoute
+  '/podcasts': typeof AppPodcastsRouteWithChildren
   '/series': typeof AppSeriesRoute
+  '/podcasts/$showId': typeof AppPodcastsShowIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -109,12 +130,15 @@ export interface FileRoutesByTo {
   '/aniversarios': typeof AppAniversariosRoute
   '/dashboard': typeof AppDashboardRoute
   '/diario': typeof AppDiarioRoute
+  '/exportar': typeof AppExportarRoute
   '/filmes': typeof AppFilmesRoute
+  '/financas': typeof AppFinancasRoute
   '/habitos': typeof AppHabitosRoute
   '/livros': typeof AppLivrosRoute
   '/metas': typeof AppMetasRoute
-  '/podcasts': typeof AppPodcastsRoute
+  '/podcasts': typeof AppPodcastsRouteWithChildren
   '/series': typeof AppSeriesRoute
+  '/podcasts/$showId': typeof AppPodcastsShowIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -125,12 +149,15 @@ export interface FileRoutesById {
   '/_app/aniversarios': typeof AppAniversariosRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/diario': typeof AppDiarioRoute
+  '/_app/exportar': typeof AppExportarRoute
   '/_app/filmes': typeof AppFilmesRoute
+  '/_app/financas': typeof AppFinancasRoute
   '/_app/habitos': typeof AppHabitosRoute
   '/_app/livros': typeof AppLivrosRoute
   '/_app/metas': typeof AppMetasRoute
-  '/_app/podcasts': typeof AppPodcastsRoute
+  '/_app/podcasts': typeof AppPodcastsRouteWithChildren
   '/_app/series': typeof AppSeriesRoute
+  '/_app/podcasts/$showId': typeof AppPodcastsShowIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,12 +168,15 @@ export interface FileRouteTypes {
     | '/aniversarios'
     | '/dashboard'
     | '/diario'
+    | '/exportar'
     | '/filmes'
+    | '/financas'
     | '/habitos'
     | '/livros'
     | '/metas'
     | '/podcasts'
     | '/series'
+    | '/podcasts/$showId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -155,12 +185,15 @@ export interface FileRouteTypes {
     | '/aniversarios'
     | '/dashboard'
     | '/diario'
+    | '/exportar'
     | '/filmes'
+    | '/financas'
     | '/habitos'
     | '/livros'
     | '/metas'
     | '/podcasts'
     | '/series'
+    | '/podcasts/$showId'
   id:
     | '__root__'
     | '/'
@@ -170,12 +203,15 @@ export interface FileRouteTypes {
     | '/_app/aniversarios'
     | '/_app/dashboard'
     | '/_app/diario'
+    | '/_app/exportar'
     | '/_app/filmes'
+    | '/_app/financas'
     | '/_app/habitos'
     | '/_app/livros'
     | '/_app/metas'
     | '/_app/podcasts'
     | '/_app/series'
+    | '/_app/podcasts/$showId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -242,11 +278,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppHabitosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/financas': {
+      id: '/_app/financas'
+      path: '/financas'
+      fullPath: '/financas'
+      preLoaderRoute: typeof AppFinancasRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/filmes': {
       id: '/_app/filmes'
       path: '/filmes'
       fullPath: '/filmes'
       preLoaderRoute: typeof AppFilmesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/exportar': {
+      id: '/_app/exportar'
+      path: '/exportar'
+      fullPath: '/exportar'
+      preLoaderRoute: typeof AppExportarRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/diario': {
@@ -277,19 +327,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAgendaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/podcasts/$showId': {
+      id: '/_app/podcasts/$showId'
+      path: '/$showId'
+      fullPath: '/podcasts/$showId'
+      preLoaderRoute: typeof AppPodcastsShowIdRouteImport
+      parentRoute: typeof AppPodcastsRoute
+    }
   }
 }
+
+interface AppPodcastsRouteChildren {
+  AppPodcastsShowIdRoute: typeof AppPodcastsShowIdRoute
+}
+
+const AppPodcastsRouteChildren: AppPodcastsRouteChildren = {
+  AppPodcastsShowIdRoute: AppPodcastsShowIdRoute,
+}
+
+const AppPodcastsRouteWithChildren = AppPodcastsRoute._addFileChildren(
+  AppPodcastsRouteChildren,
+)
 
 interface AppRouteChildren {
   AppAgendaRoute: typeof AppAgendaRoute
   AppAniversariosRoute: typeof AppAniversariosRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDiarioRoute: typeof AppDiarioRoute
+  AppExportarRoute: typeof AppExportarRoute
   AppFilmesRoute: typeof AppFilmesRoute
+  AppFinancasRoute: typeof AppFinancasRoute
   AppHabitosRoute: typeof AppHabitosRoute
   AppLivrosRoute: typeof AppLivrosRoute
   AppMetasRoute: typeof AppMetasRoute
-  AppPodcastsRoute: typeof AppPodcastsRoute
+  AppPodcastsRoute: typeof AppPodcastsRouteWithChildren
   AppSeriesRoute: typeof AppSeriesRoute
 }
 
@@ -298,11 +369,13 @@ const AppRouteChildren: AppRouteChildren = {
   AppAniversariosRoute: AppAniversariosRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDiarioRoute: AppDiarioRoute,
+  AppExportarRoute: AppExportarRoute,
   AppFilmesRoute: AppFilmesRoute,
+  AppFinancasRoute: AppFinancasRoute,
   AppHabitosRoute: AppHabitosRoute,
   AppLivrosRoute: AppLivrosRoute,
   AppMetasRoute: AppMetasRoute,
-  AppPodcastsRoute: AppPodcastsRoute,
+  AppPodcastsRoute: AppPodcastsRouteWithChildren,
   AppSeriesRoute: AppSeriesRoute,
 }
 
