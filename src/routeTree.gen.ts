@@ -22,6 +22,7 @@ import { Route as AppDiarioRouteImport } from './routes/_app/diario'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppAniversariosRouteImport } from './routes/_app/aniversarios'
 import { Route as AppAgendaRouteImport } from './routes/_app/agenda'
+import { Route as AppPodcastsShowIdRouteImport } from './routes/_app/podcasts.$showId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -87,6 +88,11 @@ const AppAgendaRoute = AppAgendaRouteImport.update({
   path: '/agenda',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPodcastsShowIdRoute = AppPodcastsShowIdRouteImport.update({
+  id: '/$showId',
+  path: '/$showId',
+  getParentRoute: () => AppPodcastsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -99,8 +105,9 @@ export interface FileRoutesByFullPath {
   '/habitos': typeof AppHabitosRoute
   '/livros': typeof AppLivrosRoute
   '/metas': typeof AppMetasRoute
-  '/podcasts': typeof AppPodcastsRoute
+  '/podcasts': typeof AppPodcastsRouteWithChildren
   '/series': typeof AppSeriesRoute
+  '/podcasts/$showId': typeof AppPodcastsShowIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -113,8 +120,9 @@ export interface FileRoutesByTo {
   '/habitos': typeof AppHabitosRoute
   '/livros': typeof AppLivrosRoute
   '/metas': typeof AppMetasRoute
-  '/podcasts': typeof AppPodcastsRoute
+  '/podcasts': typeof AppPodcastsRouteWithChildren
   '/series': typeof AppSeriesRoute
+  '/podcasts/$showId': typeof AppPodcastsShowIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -129,8 +137,9 @@ export interface FileRoutesById {
   '/_app/habitos': typeof AppHabitosRoute
   '/_app/livros': typeof AppLivrosRoute
   '/_app/metas': typeof AppMetasRoute
-  '/_app/podcasts': typeof AppPodcastsRoute
+  '/_app/podcasts': typeof AppPodcastsRouteWithChildren
   '/_app/series': typeof AppSeriesRoute
+  '/_app/podcasts/$showId': typeof AppPodcastsShowIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/metas'
     | '/podcasts'
     | '/series'
+    | '/podcasts/$showId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/metas'
     | '/podcasts'
     | '/series'
+    | '/podcasts/$showId'
   id:
     | '__root__'
     | '/'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/_app/metas'
     | '/_app/podcasts'
     | '/_app/series'
+    | '/_app/podcasts/$showId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -277,8 +289,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAgendaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/podcasts/$showId': {
+      id: '/_app/podcasts/$showId'
+      path: '/$showId'
+      fullPath: '/podcasts/$showId'
+      preLoaderRoute: typeof AppPodcastsShowIdRouteImport
+      parentRoute: typeof AppPodcastsRoute
+    }
   }
 }
+
+interface AppPodcastsRouteChildren {
+  AppPodcastsShowIdRoute: typeof AppPodcastsShowIdRoute
+}
+
+const AppPodcastsRouteChildren: AppPodcastsRouteChildren = {
+  AppPodcastsShowIdRoute: AppPodcastsShowIdRoute,
+}
+
+const AppPodcastsRouteWithChildren = AppPodcastsRoute._addFileChildren(
+  AppPodcastsRouteChildren,
+)
 
 interface AppRouteChildren {
   AppAgendaRoute: typeof AppAgendaRoute
@@ -289,7 +320,7 @@ interface AppRouteChildren {
   AppHabitosRoute: typeof AppHabitosRoute
   AppLivrosRoute: typeof AppLivrosRoute
   AppMetasRoute: typeof AppMetasRoute
-  AppPodcastsRoute: typeof AppPodcastsRoute
+  AppPodcastsRoute: typeof AppPodcastsRouteWithChildren
   AppSeriesRoute: typeof AppSeriesRoute
 }
 
@@ -302,7 +333,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppHabitosRoute: AppHabitosRoute,
   AppLivrosRoute: AppLivrosRoute,
   AppMetasRoute: AppMetasRoute,
-  AppPodcastsRoute: AppPodcastsRoute,
+  AppPodcastsRoute: AppPodcastsRouteWithChildren,
   AppSeriesRoute: AppSeriesRoute,
 }
 
@@ -316,3 +347,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
