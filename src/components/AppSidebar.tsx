@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, BookHeart, Activity, Mic, Tv, Film, BookOpen,
-  Calendar, Cake, Target, Moon, Sun, LogOut, Sparkles,
+  Calendar, Cake, Target, Moon, Sun, LogOut, Wallet, Download, Leaf,
 } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { toast } from "sonner";
@@ -19,7 +19,9 @@ const nav = [
   { to: "/livros", label: "Livros", icon: BookOpen },
   { to: "/agenda", label: "Agenda", icon: Calendar },
   { to: "/aniversarios", label: "Aniversários", icon: Cake },
+  { to: "/financas", label: "Finanças", icon: Wallet },
   { to: "/metas", label: "Metas", icon: Target },
+  { to: "/exportar", label: "Exportar", icon: Download },
 ] as const;
 
 export function AppSidebar() {
@@ -37,18 +39,18 @@ export function AppSidebar() {
   return (
     <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-sidebar p-4 md:flex">
       <Link to="/dashboard" className="flex items-center gap-2 px-2 py-2">
-        <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/20 text-primary">
-          <Sparkles className="h-5 w-5" />
+        <div className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-primary/40 to-blush/50 text-primary-foreground shadow-sm">
+          <Leaf className="h-5 w-5" />
         </div>
         <div>
-          <div className="font-display text-base leading-tight">Bullet Journal</div>
-          <div className="text-[11px] text-muted-foreground">2026 · Life OS</div>
+          <div className="font-display text-lg leading-tight">Entre Dias</div>
+          <div className="text-[11px] text-muted-foreground">Sua rotina, sua memória</div>
         </div>
       </Link>
 
-      <nav className="mt-6 flex flex-1 flex-col gap-1">
+      <nav className="mt-6 flex flex-1 flex-col gap-0.5 overflow-y-auto pr-1">
         {nav.map((item) => {
-          const active = path === item.to;
+          const active = path === item.to || (item.to !== "/dashboard" && path.startsWith(item.to));
           return (
             <Link
               key={item.to}
