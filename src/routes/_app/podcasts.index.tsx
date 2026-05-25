@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Mic, Plus, Heart, Clock, Trash2, Pencil, Search } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_app/podcasts")({ component: PodcastsPage });
+export const Route = createFileRoute("/_app/podcasts/")({ component: PodcastsPage });
 
 type Show = {
   id: string; name: string; description: string | null; platform: string | null;
