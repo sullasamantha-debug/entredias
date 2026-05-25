@@ -120,57 +120,72 @@ function PodcastsPage() {
         <StatCard label="Favoritos" value={shows.filter((s) => s.favorite).length} icon={Heart} tint="sand" />
       </div>
 
-      <div className="relative mb-5 max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar podcast ou tag…" className="pl-9 rounded-full" />
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex rounded-full border border-border bg-card p-1">
+          <button onClick={() => setTab("library")} className={`rounded-full px-4 py-1.5 text-sm transition ${tab === "library" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            Biblioteca
+          </button>
+          <button onClick={() => setTab("favorites")} className={`inline-flex items-center gap-1 rounded-full px-4 py-1.5 text-sm transition ${tab === "favorites" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            <Star className="h-3.5 w-3.5" />Favoritos
+          </button>
+        </div>
+        <div className="relative w-full max-w-xs">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar podcast ou tag…" className="pl-9 rounded-full" />
+        </div>
       </div>
 
-      {!filtered.length ? (
-        <EmptyState title="Sua biblioteca está vazia" description="Adicione o primeiro podcast." />
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((s, i) => {
-            const my = eps.filter((e) => e.show_id === s.id);
-            const sec = my.reduce((a, e) => a + (e.duration_seconds ?? 0), 0);
-            const last = my[0];
-            return (
-              <motion.div key={s.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="cozy-card overflow-hidden">
-                <Link to="/podcasts/$showId" params={{ showId: s.id }} className="block">
-                  <div className="aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-primary/20 to-blush/30">
-                    {s.cover_url ? (
-                      <img src={s.cover_url} alt={s.name} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="grid h-full place-items-center">
-                        <Mic className="h-12 w-12 text-primary/40" />
+      {tab === "library" ? (
+        !filtered.length ? (
+          <EmptyState title="Sua biblioteca está vazia" description="Adicione o primeiro podcast." />
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((s, i) => {
+              const my = eps.filter((e) => e.show_id === s.id);
+              const sec = my.reduce((a, e) => a + (e.duration_seconds ?? 0), 0);
+              const last = my[0];
+              return (
+                <motion.div key={s.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="cozy-card overflow-hidden">
+                  <Link to="/podcasts/$showId" params={{ showId: s.id }} className="block">
+                    <div className="aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-primary/20 to-blush/30">
+                      {s.cover_url ? (
+                        <img src={s.cover_url} alt={s.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="grid h-full place-items-center">
+                          <Mic className="h-12 w-12 text-primary/40" />
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <Link to="/podcasts/$showId" params={{ showId: s.id }} className="min-w-0 flex-1">
+                        <div className="font-display text-lg truncate">{s.name}</div>
+                        {s.platform && <div className="text-xs text-muted-foreground">{s.platform}</div>}
+                      </Link>
+                      <div className="flex gap-0.5">
+                        <button onClick={() => toggleFav(s)} className="grid h-8 w-8 place-items-center rounded-lg hover:bg-accent">
+                          <Heart className={`h-4 w-4 ${s.favorite ? "fill-[var(--blush)] text-[var(--blush)]" : "text-muted-foreground"}`} />
+                        </button>
+                        <button onClick={() => { setEditing(s); setOpen(true); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"><Pencil className="h-4 w-4" /></button>
+                        <button onClick={() => setConfirmId(s.id)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
                       </div>
-                    )}
-                  </div>
-                </Link>
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <Link to="/podcasts/$showId" params={{ showId: s.id }} className="min-w-0 flex-1">
-                      <div className="font-display text-lg truncate">{s.name}</div>
-                      {s.platform && <div className="text-xs text-muted-foreground">{s.platform}</div>}
-                    </Link>
-                    <div className="flex gap-0.5">
-                      <button onClick={() => toggleFav(s)} className="grid h-8 w-8 place-items-center rounded-lg hover:bg-accent">
-                        <Heart className={`h-4 w-4 ${s.favorite ? "fill-[var(--blush)] text-[var(--blush)]" : "text-muted-foreground"}`} />
-                      </button>
-                      <button onClick={() => { setEditing(s); setOpen(true); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"><Pencil className="h-4 w-4" /></button>
-                      <button onClick={() => setConfirmId(s.id)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+                    </div>
+                    <div className="mt-2"><TagBadges tags={s.tags} /></div>
+                    <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{my.length} ep · {fmtDur(sec)}</span>
+                      {last && <span className="truncate ml-2">último: {last.title}</span>}
                     </div>
                   </div>
-                  <div className="mt-2"><TagBadges tags={s.tags} /></div>
-                  <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{my.length} ep · {fmtDur(sec)}</span>
-                    {last && <span className="truncate ml-2">último: {last.title}</span>}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )
+      ) : (
+        <FavoritesView shows={shows} eps={eps} search={search} />
       )}
+
 
       <ConfirmDialog open={!!confirmId} onOpenChange={(o) => !o && setConfirmId(null)} onConfirm={remove}
         title="Excluir podcast?" description="Todos os episódios vinculados serão removidos." />
