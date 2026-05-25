@@ -12,8 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Mic, Plus, Heart, Clock, Trash2, Pencil, Search } from "lucide-react";
+import { Mic, Plus, Heart, Clock, Trash2, Pencil, Search, Star } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 export const Route = createFileRoute("/_app/podcasts/")({ component: PodcastsPage });
 
@@ -21,7 +22,8 @@ type Show = {
   id: string; name: string; description: string | null; platform: string | null;
   cover_url: string | null; tags: string[] | null; favorite: boolean;
 };
-type Ep = { id: string; show_id: string; duration_seconds: number | null; listened_date: string | null; title: string };
+type Ep = { id: string; show_id: string; duration_seconds: number | null; listened_date: string | null; title: string; favorite: boolean };
+
 
 const empty = () => ({ name: "", description: "", platform: "", cover_url: "", tags: [] as string[] });
 
