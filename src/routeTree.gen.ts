@@ -13,7 +13,6 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppSeriesRouteImport } from './routes/_app/series'
-import { Route as AppPodcastsRouteImport } from './routes/_app/podcasts'
 import { Route as AppMetasRouteImport } from './routes/_app/metas'
 import { Route as AppLivrosRouteImport } from './routes/_app/livros'
 import { Route as AppHabitosRouteImport } from './routes/_app/habitos'
@@ -24,6 +23,7 @@ import { Route as AppDiarioRouteImport } from './routes/_app/diario'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppAniversariosRouteImport } from './routes/_app/aniversarios'
 import { Route as AppAgendaRouteImport } from './routes/_app/agenda'
+import { Route as AppPodcastsIndexRouteImport } from './routes/_app/podcasts.index'
 import { Route as AppPodcastsShowIdRouteImport } from './routes/_app/podcasts.$showId'
 
 const LoginRoute = LoginRouteImport.update({
@@ -43,11 +43,6 @@ const IndexRoute = IndexRouteImport.update({
 const AppSeriesRoute = AppSeriesRouteImport.update({
   id: '/series',
   path: '/series',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppPodcastsRoute = AppPodcastsRouteImport.update({
-  id: '/podcasts',
-  path: '/podcasts',
   getParentRoute: () => AppRoute,
 } as any)
 const AppMetasRoute = AppMetasRouteImport.update({
@@ -100,10 +95,15 @@ const AppAgendaRoute = AppAgendaRouteImport.update({
   path: '/agenda',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPodcastsIndexRoute = AppPodcastsIndexRouteImport.update({
+  id: '/podcasts/',
+  path: '/podcasts/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppPodcastsShowIdRoute = AppPodcastsShowIdRouteImport.update({
-  id: '/$showId',
-  path: '/$showId',
-  getParentRoute: () => AppPodcastsRoute,
+  id: '/podcasts/$showId',
+  path: '/podcasts/$showId',
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -119,9 +119,9 @@ export interface FileRoutesByFullPath {
   '/habitos': typeof AppHabitosRoute
   '/livros': typeof AppLivrosRoute
   '/metas': typeof AppMetasRoute
-  '/podcasts': typeof AppPodcastsRouteWithChildren
   '/series': typeof AppSeriesRoute
   '/podcasts/$showId': typeof AppPodcastsShowIdRoute
+  '/podcasts/': typeof AppPodcastsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -136,9 +136,9 @@ export interface FileRoutesByTo {
   '/habitos': typeof AppHabitosRoute
   '/livros': typeof AppLivrosRoute
   '/metas': typeof AppMetasRoute
-  '/podcasts': typeof AppPodcastsRouteWithChildren
   '/series': typeof AppSeriesRoute
   '/podcasts/$showId': typeof AppPodcastsShowIdRoute
+  '/podcasts': typeof AppPodcastsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -155,9 +155,9 @@ export interface FileRoutesById {
   '/_app/habitos': typeof AppHabitosRoute
   '/_app/livros': typeof AppLivrosRoute
   '/_app/metas': typeof AppMetasRoute
-  '/_app/podcasts': typeof AppPodcastsRouteWithChildren
   '/_app/series': typeof AppSeriesRoute
   '/_app/podcasts/$showId': typeof AppPodcastsShowIdRoute
+  '/_app/podcasts/': typeof AppPodcastsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -174,9 +174,9 @@ export interface FileRouteTypes {
     | '/habitos'
     | '/livros'
     | '/metas'
-    | '/podcasts'
     | '/series'
     | '/podcasts/$showId'
+    | '/podcasts/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -191,9 +191,9 @@ export interface FileRouteTypes {
     | '/habitos'
     | '/livros'
     | '/metas'
-    | '/podcasts'
     | '/series'
     | '/podcasts/$showId'
+    | '/podcasts'
   id:
     | '__root__'
     | '/'
@@ -209,9 +209,9 @@ export interface FileRouteTypes {
     | '/_app/habitos'
     | '/_app/livros'
     | '/_app/metas'
-    | '/_app/podcasts'
     | '/_app/series'
     | '/_app/podcasts/$showId'
+    | '/_app/podcasts/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -248,13 +248,6 @@ declare module '@tanstack/react-router' {
       path: '/series'
       fullPath: '/series'
       preLoaderRoute: typeof AppSeriesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/podcasts': {
-      id: '/_app/podcasts'
-      path: '/podcasts'
-      fullPath: '/podcasts'
-      preLoaderRoute: typeof AppPodcastsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/metas': {
@@ -327,27 +320,22 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAgendaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/podcasts/': {
+      id: '/_app/podcasts/'
+      path: '/podcasts'
+      fullPath: '/podcasts/'
+      preLoaderRoute: typeof AppPodcastsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/podcasts/$showId': {
       id: '/_app/podcasts/$showId'
-      path: '/$showId'
+      path: '/podcasts/$showId'
       fullPath: '/podcasts/$showId'
       preLoaderRoute: typeof AppPodcastsShowIdRouteImport
-      parentRoute: typeof AppPodcastsRoute
+      parentRoute: typeof AppRoute
     }
   }
 }
-
-interface AppPodcastsRouteChildren {
-  AppPodcastsShowIdRoute: typeof AppPodcastsShowIdRoute
-}
-
-const AppPodcastsRouteChildren: AppPodcastsRouteChildren = {
-  AppPodcastsShowIdRoute: AppPodcastsShowIdRoute,
-}
-
-const AppPodcastsRouteWithChildren = AppPodcastsRoute._addFileChildren(
-  AppPodcastsRouteChildren,
-)
 
 interface AppRouteChildren {
   AppAgendaRoute: typeof AppAgendaRoute
@@ -360,8 +348,9 @@ interface AppRouteChildren {
   AppHabitosRoute: typeof AppHabitosRoute
   AppLivrosRoute: typeof AppLivrosRoute
   AppMetasRoute: typeof AppMetasRoute
-  AppPodcastsRoute: typeof AppPodcastsRouteWithChildren
   AppSeriesRoute: typeof AppSeriesRoute
+  AppPodcastsShowIdRoute: typeof AppPodcastsShowIdRoute
+  AppPodcastsIndexRoute: typeof AppPodcastsIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -375,8 +364,9 @@ const AppRouteChildren: AppRouteChildren = {
   AppHabitosRoute: AppHabitosRoute,
   AppLivrosRoute: AppLivrosRoute,
   AppMetasRoute: AppMetasRoute,
-  AppPodcastsRoute: AppPodcastsRouteWithChildren,
   AppSeriesRoute: AppSeriesRoute,
+  AppPodcastsShowIdRoute: AppPodcastsShowIdRoute,
+  AppPodcastsIndexRoute: AppPodcastsIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
