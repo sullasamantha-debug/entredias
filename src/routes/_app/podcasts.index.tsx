@@ -57,7 +57,7 @@ function PodcastsPage() {
     queryFn: async () => {
       const [shows, eps] = await Promise.all([
         supabase.from("podcast_shows").select("*").order("created_at", { ascending: false }),
-        supabase.from("podcast_episodes").select("id,show_id,duration_seconds,listened_date,title").order("listened_date", { ascending: false }),
+        supabase.from("podcast_episodes").select("id,show_id,duration_seconds,listened_date,title,favorite").order("listened_date", { ascending: false }),
       ]);
       return { shows: (shows.data ?? []) as Show[], eps: (eps.data ?? []) as Ep[] };
     },
