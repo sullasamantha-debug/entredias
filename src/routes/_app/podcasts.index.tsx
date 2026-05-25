@@ -192,3 +192,59 @@ function PodcastsPage() {
     </div>
   );
 }
+
+function FavoritesView({ shows, eps, search }: { shows: Show[]; eps: Ep[]; search: string }) {
+  const s = search.toLowerCase();
+  const favShows = shows.filter((x) => x.favorite && (!s || x.name.toLowerCase().includes(s)));
+  const favEps = eps.filter((e) => e.favorite && (!s || e.title.toLowerCase().includes(s)));
+  const showById = (id: string) => shows.find((x) => x.id === id);
+
+  if (!favShows.length && !favEps.length) {
+    return <EmptyState title="Nenhum favorito ainda" description="Use o ❤️ para marcar podcasts e episódios." />;
+  }
+  return (
+    <div className="space-y-8">
+      <section>
+        <h2 className="mb-3 font-display text-xl">Podcasts favoritos</h2>
+        {!favShows.length ? <div className="text-sm text-muted-foreground">Nenhum podcast favorito.</div> : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {favShows.map((x) => (
+              <Link key={x.id} to="/podcasts/$showId" params={{ showId: x.id }} className="cozy-card flex items-center gap-3 p-3 hover:bg-accent/40">
+                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 to-blush/30">
+                  {x.cover_url ? <img src={x.cover_url} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center"><Mic className="h-5 w-5 text-primary/50" /></div>}
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{x.name}</div>
+                  {x.platform && <div className="truncate text-xs text-muted-foreground">{x.platform}</div>}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="mb-3 font-display text-xl">Episódios favoritos</h2>
+        {!favEps.length ? <div className="text-sm text-muted-foreground">Nenhum episódio favorito.</div> : (
+          <div className="space-y-2">
+            {favEps.map((e) => {
+              const sh = showById(e.show_id);
+              return (
+                <Link key={e.id} to="/podcasts/$showId" params={{ showId: e.show_id }} className="cozy-card flex items-center gap-3 p-3 hover:bg-accent/40">
+                  <Heart className="h-4 w-4 fill-[var(--blush)] text-[var(--blush)] shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium">{e.title}</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {sh?.name ?? "—"}{e.listened_date ? ` · ${format(new Date(e.listened_date), "dd/MM/yyyy")}` : ""}
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
