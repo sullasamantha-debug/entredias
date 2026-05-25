@@ -41,7 +41,9 @@ function PodcastsPage() {
   const [editing, setEditing] = useState<Show | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"library" | "favorites">("library");
   const [form, setForm] = useState(empty());
+
 
   useEffect(() => {
     if (!open) return;
