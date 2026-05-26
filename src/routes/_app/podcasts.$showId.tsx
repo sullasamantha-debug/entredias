@@ -108,7 +108,18 @@ function ShowPage() {
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="font-display text-3xl">{show.name}</h1>
-            {show.platform && <div className="text-sm text-muted-foreground">{show.platform}</div>}
+            <div className="mt-1 flex flex-wrap gap-1">
+              {show.interest_status && (
+                <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] text-foreground/80">
+                  {({ want: "Quero ouvir", listening: "Ouvindo", finished: "Finalizado", paused: "Pausado" } as Record<string, string>)[show.interest_status] ?? show.interest_status}
+                </span>
+              )}
+              {show.show_status && (
+                <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] text-foreground/80">
+                  {show.show_status === "ended" ? "Encerrado" : "Em andamento"}
+                </span>
+              )}
+            </div>
             {show.description && <p className="mt-2 text-sm text-foreground/80">{show.description}</p>}
             <div className="mt-3 flex flex-wrap gap-1">
               {(show.tags ?? []).map((t: string) => <span key={t} className="rounded-full bg-accent px-2 py-0.5 text-xs">{t}</span>)}

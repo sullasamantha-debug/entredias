@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { PageHeader, EmptyState, StatCard } from "@/components/cozy";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TagInput, TagBadges } from "@/components/TagInput";
+import { CoverUpload } from "@/components/CoverUpload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,13 +20,45 @@ import { format } from "date-fns";
 export const Route = createFileRoute("/_app/podcasts/")({ component: PodcastsPage });
 
 type Show = {
-  id: string; name: string; description: string | null; platform: string | null;
+  id: string; name: string; description: string | null;
   cover_url: string | null; tags: string[] | null; favorite: boolean;
+  show_status: string; interest_status: string;
 };
 type Ep = { id: string; show_id: string; duration_seconds: number | null; listened_date: string | null; title: string; favorite: boolean };
 
+type InterestKey = "all" | "want" | "listening" | "finished" | "paused" | "favorites";
 
-const empty = () => ({ name: "", description: "", platform: "", cover_url: "", tags: [] as string[] });
+const INTEREST_OPTS = [
+  { value: "want", label: "Quero ouvir" },
+  { value: "listening", label: "Ouvindo" },
+  { value: "finished", label: "Finalizado" },
+  { value: "paused", label: "Pausado" },
+] as const;
+
+const SHOW_STATUS_OPTS = [
+  { value: "ongoing", label: "Em andamento" },
+  { value: "ended", label: "Finalizado" },
+] as const;
+
+function interestBadge(v: string) {
+  const map: Record<string, { label: string; cls: string }> = {
+    want:      { label: "Quero ouvir",  cls: "bg-blush/30 text-foreground/80" },
+    listening: { label: "Ouvindo",      cls: "bg-primary/20 text-foreground/80" },
+    finished:  { label: "Finalizado",   cls: "bg-mint/30 text-foreground/80" },
+    paused:    { label: "Pausado",      cls: "bg-sand/40 text-foreground/80" },
+  };
+  return map[v] ?? map.listening;
+}
+function showStatusBadge(v: string) {
+  return v === "ended"
+    ? { label: "Encerrado", cls: "bg-muted text-muted-foreground" }
+    : { label: "Em andamento", cls: "bg-accent text-foreground/80" };
+}
+
+const empty = () => ({
+  name: "", description: "", cover_url: "", tags: [] as string[],
+  show_status: "ongoing", interest_status: "listening",
+});
 
 function fmtDur(sec: number) {
   const h = Math.floor(sec / 3600);
@@ -42,13 +75,20 @@ function PodcastsPage() {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"library" | "favorites">("library");
+  const [filter, setFilter] = useState<InterestKey>("all");
   const [form, setForm] = useState(empty());
-
 
   useEffect(() => {
     if (!open) return;
     setForm(editing
-      ? { name: editing.name, description: editing.description ?? "", platform: editing.platform ?? "", cover_url: editing.cover_url ?? "", tags: editing.tags ?? [] }
+      ? {
+          name: editing.name,
+          description: editing.description ?? "",
+          cover_url: editing.cover_url ?? "",
+          tags: editing.tags ?? [],
+          show_status: editing.show_status ?? "ongoing",
+          interest_status: editing.interest_status ?? "listening",
+        }
       : empty());
   }, [open, editing]);
 
@@ -65,7 +105,15 @@ function PodcastsPage() {
 
   const save = async () => {
     if (!user || !form.name) return;
-    const payload = { ...form, user_id: user.id };
+    const payload = {
+      name: form.name,
+      description: form.description,
+      cover_url: form.cover_url || null,
+      tags: form.tags,
+      show_status: form.show_status,
+      interest_status: form.interest_status,
+      user_id: user.id,
+    };
     const { error } = editing
       ? await supabase.from("podcast_shows").update(payload).eq("id", editing.id)
       : await supabase.from("podcast_shows").insert(payload);
@@ -88,8 +136,23 @@ function PodcastsPage() {
 
   const shows = data?.shows ?? [];
   const eps = data?.eps ?? [];
-  const filtered = shows.filter((s) => !search || s.name.toLowerCase().includes(search.toLowerCase()) || (s.tags ?? []).some((t) => t.toLowerCase().includes(search.toLowerCase())));
+  const s = search.toLowerCase();
+  const filtered = shows.filter((x) => {
+    if (s && !x.name.toLowerCase().includes(s) && !(x.tags ?? []).some((t) => t.toLowerCase().includes(s))) return false;
+    if (filter === "all") return true;
+    if (filter === "favorites") return x.favorite;
+    return x.interest_status === filter;
+  });
   const totalSec = eps.reduce((a, e) => a + (e.duration_seconds ?? 0), 0);
+
+  const FILTERS: { key: InterestKey; label: string }[] = [
+    { key: "all", label: "Todos" },
+    { key: "want", label: "Quero ouvir" },
+    { key: "listening", label: "Ouvindo" },
+    { key: "finished", label: "Finalizados" },
+    { key: "paused", label: "Pausados" },
+    { key: "favorites", label: "Favoritos" },
+  ];
 
   return (
     <div>
@@ -101,10 +164,28 @@ function PodcastsPage() {
         <DialogContent>
           <DialogHeader><DialogTitle className="font-display">{editing ? "Editar podcast" : "Novo podcast"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
+            <div>
+              <Label>Capa</Label>
+              <div className="mt-1">
+                <CoverUpload value={form.cover_url || null} onChange={(url) => setForm({ ...form, cover_url: url ?? "" })} />
+              </div>
+            </div>
             <div><Label>Nome</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Plataforma</Label><Input value={form.platform} onChange={(e) => setForm({ ...form, platform: e.target.value })} placeholder="Spotify…" /></div>
-              <div><Label>Capa (URL)</Label><Input value={form.cover_url} onChange={(e) => setForm({ ...form, cover_url: e.target.value })} /></div>
+              <div>
+                <Label>Status do podcast</Label>
+                <select value={form.show_status} onChange={(e) => setForm({ ...form, show_status: e.target.value })}
+                  className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                  {SHOW_STATUS_OPTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <Label>Status de interesse</Label>
+                <select value={form.interest_status} onChange={(e) => setForm({ ...form, interest_status: e.target.value })}
+                  className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                  {INTEREST_OPTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
             </div>
             <div><Label>Tags</Label><TagInput value={form.tags} onChange={(t) => setForm({ ...form, tags: t })} /></div>
             <div><Label>Descrição</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
@@ -115,9 +196,9 @@ function PodcastsPage() {
 
       <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Podcasts" value={shows.length} icon={Mic} />
-        <StatCard label="Episódios" value={eps.length} tint="blush" />
+        <StatCard label="Quero ouvir" value={shows.filter((x) => x.interest_status === "want").length} tint="blush" />
         <StatCard label="Tempo total" value={fmtDur(totalSec)} icon={Clock} tint="mint" />
-        <StatCard label="Favoritos" value={shows.filter((s) => s.favorite).length} icon={Heart} tint="sand" />
+        <StatCard label="Favoritos" value={shows.filter((x) => x.favorite).length} icon={Heart} tint="sand" />
       </div>
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -135,21 +216,34 @@ function PodcastsPage() {
         </div>
       </div>
 
+      {tab === "library" && (
+        <div className="mb-5 flex flex-wrap gap-1.5">
+          {FILTERS.map((f) => (
+            <button key={f.key} onClick={() => setFilter(f.key)}
+              className={`rounded-full px-3 py-1 text-xs transition ${filter === f.key ? "bg-foreground text-background" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {tab === "library" ? (
         !filtered.length ? (
-          <EmptyState title="Sua biblioteca está vazia" description="Adicione o primeiro podcast." />
+          <EmptyState title="Nada por aqui" description="Adicione um podcast — pode ser só para lembrar de ouvir depois." />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((s, i) => {
-              const my = eps.filter((e) => e.show_id === s.id);
+            {filtered.map((x, i) => {
+              const my = eps.filter((e) => e.show_id === x.id);
               const sec = my.reduce((a, e) => a + (e.duration_seconds ?? 0), 0);
               const last = my[0];
+              const ib = interestBadge(x.interest_status);
+              const sb = showStatusBadge(x.show_status);
               return (
-                <motion.div key={s.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="cozy-card overflow-hidden">
-                  <Link to="/podcasts/$showId" params={{ showId: s.id }} className="block">
+                <motion.div key={x.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="cozy-card overflow-hidden">
+                  <Link to="/podcasts/$showId" params={{ showId: x.id }} className="block">
                     <div className="aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-primary/20 to-blush/30">
-                      {s.cover_url ? (
-                        <img src={s.cover_url} alt={s.name} className="h-full w-full object-cover" />
+                      {x.cover_url ? (
+                        <img src={x.cover_url} alt={x.name} className="h-full w-full object-cover" />
                       ) : (
                         <div className="grid h-full place-items-center">
                           <Mic className="h-12 w-12 text-primary/40" />
@@ -159,19 +253,22 @@ function PodcastsPage() {
                   </Link>
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-2">
-                      <Link to="/podcasts/$showId" params={{ showId: s.id }} className="min-w-0 flex-1">
-                        <div className="font-display text-lg truncate">{s.name}</div>
-                        {s.platform && <div className="text-xs text-muted-foreground">{s.platform}</div>}
+                      <Link to="/podcasts/$showId" params={{ showId: x.id }} className="min-w-0 flex-1">
+                        <div className="font-display text-lg truncate">{x.name}</div>
                       </Link>
                       <div className="flex gap-0.5">
-                        <button onClick={() => toggleFav(s)} className="grid h-8 w-8 place-items-center rounded-lg hover:bg-accent">
-                          <Heart className={`h-4 w-4 ${s.favorite ? "fill-[var(--blush)] text-[var(--blush)]" : "text-muted-foreground"}`} />
+                        <button onClick={() => toggleFav(x)} className="grid h-8 w-8 place-items-center rounded-lg hover:bg-accent">
+                          <Heart className={`h-4 w-4 ${x.favorite ? "fill-[var(--blush)] text-[var(--blush)]" : "text-muted-foreground"}`} />
                         </button>
-                        <button onClick={() => { setEditing(s); setOpen(true); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"><Pencil className="h-4 w-4" /></button>
-                        <button onClick={() => setConfirmId(s.id)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+                        <button onClick={() => { setEditing(x); setOpen(true); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"><Pencil className="h-4 w-4" /></button>
+                        <button onClick={() => setConfirmId(x.id)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     </div>
-                    <div className="mt-2"><TagBadges tags={s.tags} /></div>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] ${ib.cls}`}>{ib.label}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] ${sb.cls}`}>{sb.label}</span>
+                    </div>
+                    <div className="mt-2"><TagBadges tags={x.tags} /></div>
                     <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
                       <span>{my.length} ep · {fmtDur(sec)}</span>
                       {last && <span className="truncate ml-2">último: {last.title}</span>}
@@ -185,7 +282,6 @@ function PodcastsPage() {
       ) : (
         <FavoritesView shows={shows} eps={eps} search={search} />
       )}
-
 
       <ConfirmDialog open={!!confirmId} onOpenChange={(o) => !o && setConfirmId(null)} onConfirm={remove}
         title="Excluir podcast?" description="Todos os episódios vinculados serão removidos." />
@@ -215,7 +311,7 @@ function FavoritesView({ shows, eps, search }: { shows: Show[]; eps: Ep[]; searc
                 </div>
                 <div className="min-w-0">
                   <div className="truncate font-medium">{x.name}</div>
-                  {x.platform && <div className="truncate text-xs text-muted-foreground">{x.platform}</div>}
+                  <div className="truncate text-xs text-muted-foreground">{interestBadge(x.interest_status).label}</div>
                 </div>
               </Link>
             ))}
@@ -247,4 +343,3 @@ function FavoritesView({ shows, eps, search }: { shows: Show[]; eps: Ep[]; searc
     </div>
   );
 }
-
