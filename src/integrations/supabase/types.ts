@@ -421,8 +421,10 @@ export type Database = {
           description: string | null
           favorite: boolean
           id: string
+          interest_status: string
           name: string
           platform: string | null
+          show_status: string
           tags: string[] | null
           user_id: string
         }
@@ -432,8 +434,10 @@ export type Database = {
           description?: string | null
           favorite?: boolean
           id?: string
+          interest_status?: string
           name: string
           platform?: string | null
+          show_status?: string
           tags?: string[] | null
           user_id: string
         }
@@ -443,8 +447,10 @@ export type Database = {
           description?: string | null
           favorite?: boolean
           id?: string
+          interest_status?: string
           name?: string
           platform?: string | null
+          show_status?: string
           tags?: string[] | null
           user_id?: string
         }
