@@ -6,6 +6,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouterState } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app")({
+  // Disable SSR for the authenticated app shell so unauthenticated requests
+  // never receive the protected layout HTML. Auth gating runs on the client.
+  ssr: false,
   beforeLoad: async () => {
     if (typeof window === "undefined") return;
     const { data } = await supabase.auth.getSession();
