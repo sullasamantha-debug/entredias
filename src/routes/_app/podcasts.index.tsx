@@ -131,7 +131,6 @@ function PodcastsPage() {
 
   const listened = eps.filter((e) => e.status === "listened");
   const want = eps.filter((e) => e.status === "want");
-  const unheard = eps.filter((e) => e.status === "unheard");
   const listenedSec = listened.reduce((a, e) => a + (e.duration_seconds ?? 0), 0);
 
   // Most listened podcast
@@ -142,6 +141,16 @@ function PodcastsPage() {
   countByShow.forEach((c, id) => {
     if (c > topCount) { topCount = c; topShowName = shows.find((x) => x.id === id)?.name ?? "—"; }
   });
+
+  // Most listened genre (from show tags)
+  const genreCount = new Map<string, number>();
+  listened.forEach((e) => {
+    const sh = shows.find((x) => x.id === e.show_id);
+    (sh?.tags ?? []).forEach((t) => genreCount.set(t, (genreCount.get(t) ?? 0) + 1));
+  });
+  let topGenre = "—";
+  let topGenreCount = 0;
+  genreCount.forEach((c, t) => { if (c > topGenreCount) { topGenreCount = c; topGenre = t; } });
 
   const FILTERS: { key: Filter; label: string }[] = [
     { key: "all", label: "Todos" },
@@ -186,9 +195,9 @@ function PodcastsPage() {
         <StatCard label="Podcasts" value={shows.length} icon={Mic} />
         <StatCard label="Escutados" value={listened.length} icon={Headphones} tint="mint" />
         <StatCard label="Quero ouvir" value={want.length} icon={Bookmark} tint="blush" />
-        <StatCard label="Não escutados" value={unheard.length} icon={CircleDashed} tint="sand" />
         <StatCard label="Tempo escutado" value={fmtDur(listenedSec)} icon={Clock} />
         <StatCard label="Mais ouvido" value={topShowName} />
+        <StatCard label="Gênero top" value={topGenre} />
       </div>
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
