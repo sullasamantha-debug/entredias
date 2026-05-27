@@ -17,7 +17,7 @@ import { format } from "date-fns";
 
 export const Route = createFileRoute("/_app/podcasts/$showId")({ component: ShowPage });
 
-type EpStatus = "unheard" | "want" | "listened";
+type EpStatus = "want" | "listened";
 
 type Ep = {
   id: string; show_id: string; title: string; listened_date: string | null;
@@ -25,25 +25,23 @@ type Ep = {
   favorite: boolean; status: EpStatus;
 };
 
-type Filter = "all" | "listened" | "want" | "unheard" | "favorites";
+type Filter = "all" | "listened" | "want" | "favorites";
 
 const STATUS_OPTS: { value: EpStatus; label: string }[] = [
-  { value: "unheard", label: "Não escutado" },
   { value: "want", label: "Quero ouvir" },
   { value: "listened", label: "Escutado" },
 ];
 
 function statusBadge(v: string) {
   const map: Record<string, { label: string; cls: string }> = {
-    listened: { label: "Escutado",     cls: "bg-mint/30 text-foreground/80" },
-    want:     { label: "Quero ouvir",  cls: "bg-blush/30 text-foreground/80" },
-    unheard:  { label: "Não escutado", cls: "bg-muted text-muted-foreground" },
+    listened: { label: "Escutado",    cls: "bg-mint/30 text-foreground/80" },
+    want:     { label: "Quero ouvir", cls: "bg-blush/30 text-foreground/80" },
   };
-  return map[v] ?? map.unheard;
+  return map[v] ?? map.want;
 }
 
 const empty = () => ({
-  title: "", status: "unheard" as EpStatus,
+  title: "", status: "want" as EpStatus,
   listened_date: format(new Date(), "yyyy-MM-dd"),
   h: 0, m: 30, s: 0, rating: 5, notes: "",
 });
@@ -64,7 +62,7 @@ function ShowPage() {
       const sec = editing.duration_seconds ?? 0;
       setForm({
         title: editing.title,
-        status: (editing.status ?? "unheard") as EpStatus,
+        status: (editing.status === "listened" ? "listened" : "want") as EpStatus,
         listened_date: editing.listened_date ?? format(new Date(), "yyyy-MM-dd"),
         h: Math.floor(sec / 3600), m: Math.floor((sec % 3600) / 60), s: sec % 60,
         rating: editing.rating ?? 5, notes: editing.notes ?? "",
@@ -145,7 +143,6 @@ function ShowPage() {
     { key: "all", label: "Todos", count: eps.length },
     { key: "listened", label: "Escutados", count: eps.filter((e) => e.status === "listened").length },
     { key: "want", label: "Quero ouvir", count: eps.filter((e) => e.status === "want").length },
-    { key: "unheard", label: "Não escutados", count: eps.filter((e) => e.status === "unheard").length },
     { key: "favorites", label: "Favoritos", count: eps.filter((e) => e.favorite).length },
   ];
 
