@@ -143,7 +143,6 @@ function ShowPage() {
     { key: "all", label: "Todos", count: eps.length },
     { key: "listened", label: "Escutados", count: eps.filter((e) => e.status === "listened").length },
     { key: "want", label: "Quero ouvir", count: eps.filter((e) => e.status === "want").length },
-    { key: "unheard", label: "Não escutados", count: eps.filter((e) => e.status === "unheard").length },
     { key: "favorites", label: "Favoritos", count: eps.filter((e) => e.favorite).length },
   ];
 
