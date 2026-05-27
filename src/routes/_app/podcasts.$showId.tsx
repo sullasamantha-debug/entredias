@@ -118,8 +118,9 @@ function ShowPage() {
   };
 
   const setStatus = async (e: Ep, status: EpStatus) => {
-    const patch: Record<string, unknown> = { status };
-    if (status === "listened" && !e.listened_date) patch.listened_date = format(new Date(), "yyyy-MM-dd");
+    const patch = status === "listened" && !e.listened_date
+      ? { status, listened_date: format(new Date(), "yyyy-MM-dd") }
+      : { status };
     await supabase.from("podcast_episodes").update(patch).eq("id", e.id);
     qc.invalidateQueries({ queryKey: ["show", showId] });
   };
