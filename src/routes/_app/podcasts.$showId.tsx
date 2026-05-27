@@ -62,7 +62,7 @@ function ShowPage() {
       const sec = editing.duration_seconds ?? 0;
       setForm({
         title: editing.title,
-        status: (editing.status ?? "unheard") as EpStatus,
+        status: (editing.status === "listened" ? "listened" : "want") as EpStatus,
         listened_date: editing.listened_date ?? format(new Date(), "yyyy-MM-dd"),
         h: Math.floor(sec / 3600), m: Math.floor((sec % 3600) / 60), s: sec % 60,
         rating: editing.rating ?? 5, notes: editing.notes ?? "",
