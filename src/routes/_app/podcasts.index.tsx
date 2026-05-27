@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Mic, Plus, Heart, Clock, Trash2, Pencil, Search, Star } from "lucide-react";
+import { Mic, Plus, Heart, Clock, Trash2, Pencil, Search, Star, Headphones, Bookmark, CircleDashed } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -22,33 +22,20 @@ export const Route = createFileRoute("/_app/podcasts/")({ component: PodcastsPag
 type Show = {
   id: string; name: string; description: string | null;
   cover_url: string | null; tags: string[] | null; favorite: boolean;
-  show_status: string; interest_status: string;
+  show_status: string;
 };
-type Ep = { id: string; show_id: string; duration_seconds: number | null; listened_date: string | null; title: string; favorite: boolean };
+type Ep = {
+  id: string; show_id: string; duration_seconds: number | null;
+  listened_date: string | null; title: string; favorite: boolean; status: string;
+};
 
-type InterestKey = "all" | "want" | "listening" | "finished" | "paused" | "favorites";
-
-const INTEREST_OPTS = [
-  { value: "want", label: "Quero ouvir" },
-  { value: "listening", label: "Ouvindo" },
-  { value: "finished", label: "Finalizado" },
-  { value: "paused", label: "Pausado" },
-] as const;
+type Filter = "all" | "ongoing" | "ended" | "favorites";
 
 const SHOW_STATUS_OPTS = [
   { value: "ongoing", label: "Em andamento" },
   { value: "ended", label: "Finalizado" },
 ] as const;
 
-function interestBadge(v: string) {
-  const map: Record<string, { label: string; cls: string }> = {
-    want:      { label: "Quero ouvir",  cls: "bg-blush/30 text-foreground/80" },
-    listening: { label: "Ouvindo",      cls: "bg-primary/20 text-foreground/80" },
-    finished:  { label: "Finalizado",   cls: "bg-mint/30 text-foreground/80" },
-    paused:    { label: "Pausado",      cls: "bg-sand/40 text-foreground/80" },
-  };
-  return map[v] ?? map.listening;
-}
 function showStatusBadge(v: string) {
   return v === "ended"
     ? { label: "Encerrado", cls: "bg-muted text-muted-foreground" }
@@ -57,7 +44,7 @@ function showStatusBadge(v: string) {
 
 const empty = () => ({
   name: "", description: "", cover_url: "", tags: [] as string[],
-  show_status: "ongoing", interest_status: "listening",
+  show_status: "ongoing",
 });
 
 function fmtDur(sec: number) {
@@ -75,7 +62,7 @@ function PodcastsPage() {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"library" | "favorites">("library");
-  const [filter, setFilter] = useState<InterestKey>("all");
+  const [filter, setFilter] = useState<Filter>("all");
   const [form, setForm] = useState(empty());
 
   useEffect(() => {
@@ -87,7 +74,6 @@ function PodcastsPage() {
           cover_url: editing.cover_url ?? "",
           tags: editing.tags ?? [],
           show_status: editing.show_status ?? "ongoing",
-          interest_status: editing.interest_status ?? "listening",
         }
       : empty());
   }, [open, editing]);
@@ -97,26 +83,25 @@ function PodcastsPage() {
     queryFn: async () => {
       const [shows, eps] = await Promise.all([
         supabase.from("podcast_shows").select("*").order("created_at", { ascending: false }),
-        supabase.from("podcast_episodes").select("id,show_id,duration_seconds,listened_date,title,favorite").order("listened_date", { ascending: false }),
+        supabase.from("podcast_episodes").select("id,show_id,duration_seconds,listened_date,title,favorite,status").order("listened_date", { ascending: false }),
       ]);
-      return { shows: (shows.data ?? []) as Show[], eps: (eps.data ?? []) as Ep[] };
+      return { shows: (shows.data ?? []) as unknown as Show[], eps: (eps.data ?? []) as unknown as Ep[] };
     },
   });
 
   const save = async () => {
     if (!user || !form.name) return;
-    const payload = {
+    const payload: Record<string, unknown> = {
       name: form.name,
       description: form.description,
       cover_url: form.cover_url || null,
       tags: form.tags,
       show_status: form.show_status,
-      interest_status: form.interest_status,
       user_id: user.id,
     };
     const { error } = editing
       ? await supabase.from("podcast_shows").update(payload).eq("id", editing.id)
-      : await supabase.from("podcast_shows").insert(payload);
+      : await supabase.from("podcast_shows").insert(payload as never);
     if (error) return toast.error(error.message);
     setOpen(false); setEditing(null);
     qc.invalidateQueries({ queryKey: ["podcast_shows"] });
@@ -141,16 +126,27 @@ function PodcastsPage() {
     if (s && !x.name.toLowerCase().includes(s) && !(x.tags ?? []).some((t) => t.toLowerCase().includes(s))) return false;
     if (filter === "all") return true;
     if (filter === "favorites") return x.favorite;
-    return x.interest_status === filter;
+    return x.show_status === filter;
   });
-  const totalSec = eps.reduce((a, e) => a + (e.duration_seconds ?? 0), 0);
 
-  const FILTERS: { key: InterestKey; label: string }[] = [
+  const listened = eps.filter((e) => e.status === "listened");
+  const want = eps.filter((e) => e.status === "want");
+  const unheard = eps.filter((e) => e.status === "unheard");
+  const listenedSec = listened.reduce((a, e) => a + (e.duration_seconds ?? 0), 0);
+
+  // Most listened podcast
+  const countByShow = new Map<string, number>();
+  listened.forEach((e) => countByShow.set(e.show_id, (countByShow.get(e.show_id) ?? 0) + 1));
+  let topShowName = "—";
+  let topCount = 0;
+  countByShow.forEach((c, id) => {
+    if (c > topCount) { topCount = c; topShowName = shows.find((x) => x.id === id)?.name ?? "—"; }
+  });
+
+  const FILTERS: { key: Filter; label: string }[] = [
     { key: "all", label: "Todos" },
-    { key: "want", label: "Quero ouvir" },
-    { key: "listening", label: "Ouvindo" },
-    { key: "finished", label: "Finalizados" },
-    { key: "paused", label: "Pausados" },
+    { key: "ongoing", label: "Em andamento" },
+    { key: "ended", label: "Encerrados" },
     { key: "favorites", label: "Favoritos" },
   ];
 
@@ -171,21 +167,13 @@ function PodcastsPage() {
               </div>
             </div>
             <div><Label>Nome</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Status do podcast</Label>
-                <select value={form.show_status} onChange={(e) => setForm({ ...form, show_status: e.target.value })}
-                  className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                  {SHOW_STATUS_OPTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <Label>Status de interesse</Label>
-                <select value={form.interest_status} onChange={(e) => setForm({ ...form, interest_status: e.target.value })}
-                  className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                  {INTEREST_OPTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-              </div>
+            <div>
+              <Label>Status do podcast</Label>
+              <select value={form.show_status} onChange={(e) => setForm({ ...form, show_status: e.target.value })}
+                className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                {SHOW_STATUS_OPTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">Se o podcast ainda lança episódios ou já foi encerrado.</p>
             </div>
             <div><Label>Tags</Label><TagInput value={form.tags} onChange={(t) => setForm({ ...form, tags: t })} /></div>
             <div><Label>Descrição</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
@@ -194,11 +182,13 @@ function PodcastsPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         <StatCard label="Podcasts" value={shows.length} icon={Mic} />
-        <StatCard label="Quero ouvir" value={shows.filter((x) => x.interest_status === "want").length} tint="blush" />
-        <StatCard label="Tempo total" value={fmtDur(totalSec)} icon={Clock} tint="mint" />
-        <StatCard label="Favoritos" value={shows.filter((x) => x.favorite).length} icon={Heart} tint="sand" />
+        <StatCard label="Escutados" value={listened.length} icon={Headphones} tint="mint" />
+        <StatCard label="Quero ouvir" value={want.length} icon={Bookmark} tint="blush" />
+        <StatCard label="Não escutados" value={unheard.length} icon={CircleDashed} tint="sand" />
+        <StatCard label="Tempo escutado" value={fmtDur(listenedSec)} icon={Clock} />
+        <StatCard label="Mais ouvido" value={topShowName} />
       </div>
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -234,9 +224,10 @@ function PodcastsPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((x, i) => {
               const my = eps.filter((e) => e.show_id === x.id);
-              const sec = my.reduce((a, e) => a + (e.duration_seconds ?? 0), 0);
-              const last = my[0];
-              const ib = interestBadge(x.interest_status);
+              const myListened = my.filter((e) => e.status === "listened");
+              const myWant = my.filter((e) => e.status === "want").length;
+              const sec = myListened.reduce((a, e) => a + (e.duration_seconds ?? 0), 0);
+              const last = myListened[0];
               const sb = showStatusBadge(x.show_status);
               return (
                 <motion.div key={x.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="cozy-card overflow-hidden">
@@ -265,12 +256,12 @@ function PodcastsPage() {
                       </div>
                     </div>
                     <div className="mt-2 flex flex-wrap gap-1">
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] ${ib.cls}`}>{ib.label}</span>
                       <span className={`rounded-full px-2 py-0.5 text-[10px] ${sb.cls}`}>{sb.label}</span>
+                      {myWant > 0 && <span className="rounded-full bg-blush/30 px-2 py-0.5 text-[10px] text-foreground/80">{myWant} p/ ouvir</span>}
                     </div>
                     <div className="mt-2"><TagBadges tags={x.tags} /></div>
                     <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{my.length} ep · {fmtDur(sec)}</span>
+                      <span>{myListened.length}/{my.length} ep · {fmtDur(sec)}</span>
                       {last && <span className="truncate ml-2">último: {last.title}</span>}
                     </div>
                   </div>
@@ -311,7 +302,7 @@ function FavoritesView({ shows, eps, search }: { shows: Show[]; eps: Ep[]; searc
                 </div>
                 <div className="min-w-0">
                   <div className="truncate font-medium">{x.name}</div>
-                  <div className="truncate text-xs text-muted-foreground">{interestBadge(x.interest_status).label}</div>
+                  <div className="truncate text-xs text-muted-foreground">{showStatusBadge(x.show_status).label}</div>
                 </div>
               </Link>
             ))}
