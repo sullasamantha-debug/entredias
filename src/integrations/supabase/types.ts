@@ -377,6 +377,7 @@ export type Database = {
           notes: string | null
           rating: number | null
           show_id: string
+          status: string
           title: string
           user_id: string
         }
@@ -389,6 +390,7 @@ export type Database = {
           notes?: string | null
           rating?: number | null
           show_id: string
+          status?: string
           title: string
           user_id: string
         }
@@ -401,6 +403,7 @@ export type Database = {
           notes?: string | null
           rating?: number | null
           show_id?: string
+          status?: string
           title?: string
           user_id?: string
         }
