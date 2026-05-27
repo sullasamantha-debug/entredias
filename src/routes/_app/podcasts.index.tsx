@@ -91,7 +91,7 @@ function PodcastsPage() {
 
   const save = async () => {
     if (!user || !form.name) return;
-    const payload: Record<string, unknown> = {
+    const payload = {
       name: form.name,
       description: form.description,
       cover_url: form.cover_url || null,
@@ -101,7 +101,7 @@ function PodcastsPage() {
     };
     const { error } = editing
       ? await supabase.from("podcast_shows").update(payload).eq("id", editing.id)
-      : await supabase.from("podcast_shows").insert(payload as never);
+      : await supabase.from("podcast_shows").insert(payload);
     if (error) return toast.error(error.message);
     setOpen(false); setEditing(null);
     qc.invalidateQueries({ queryKey: ["podcast_shows"] });
