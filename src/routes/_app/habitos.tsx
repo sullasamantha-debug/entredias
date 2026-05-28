@@ -17,6 +17,7 @@ import {
   startOfWeek, endOfWeek, addMonths, subMonths, isSameMonth, isSameDay, isAfter, startOfYear, endOfYear,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateOnly } from "@/lib/dates";
 
 export const Route = createFileRoute("/_app/habitos")({ component: HabitosPage });
 
@@ -64,7 +65,7 @@ function HabitosPage() {
 
   const toggle = async (habitId: string, date: string) => {
     if (!user || !data) return;
-    if (isAfter(new Date(date), today)) return;
+    if (isAfter(parseDateOnly(date), today)) return;
     const existing = data.logs.find((l) => l.habit_id === habitId && l.date === date);
     if (existing) await supabase.from("habit_logs").delete().eq("id", existing.id);
     else await supabase.from("habit_logs").insert({ habit_id: habitId, date, user_id: user.id, done: true });
