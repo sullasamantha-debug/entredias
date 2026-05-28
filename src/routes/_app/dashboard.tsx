@@ -30,7 +30,7 @@ function Dashboard() {
     queryFn: async () => {
       const [habits, habitLogs, podcasts, movies, series, books, events, birthdays, diary] = await Promise.all([
         supabase.from("habits").select("*").eq("archived", false),
-        supabase.from("habit_logs").select("*").gte("date", format(subDays(today, 120), "yyyy-MM-dd")),
+        supabase.from("habit_logs").select("*").gte("date", localDateKey(subDays(today, 120))),
         supabase.from("podcasts").select("*").gte("date", monthStart).lte("date", monthEnd),
         supabase.from("movies").select("*").gte("watched_date", monthStart).lte("watched_date", monthEnd),
         supabase.from("series").select("episodes_watched, status"),
