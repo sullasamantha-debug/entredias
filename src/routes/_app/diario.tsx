@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BookHeart, Plus, Heart, Search, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { format, parseISO } from "date-fns";
+import { formatDateOnly, localDateKey } from "@/lib/dates";
 import { ptBR } from "date-fns/locale";
 
 export const Route = createFileRoute("/_app/diario")({ component: DiarioPage });
@@ -25,7 +25,7 @@ type Entry = {
   rating: number | null; favorite: boolean; title: string | null;
 };
 
-const empty = () => ({ date: format(new Date(), "yyyy-MM-dd"), content: "", mood: 3, rating: 7 });
+const empty = () => ({ date: localDateKey(), content: "", mood: 3, rating: 7 });
 
 function DiarioPage() {
   const { user } = useAuth();
@@ -153,7 +153,7 @@ function DiarioPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                      {format(parseISO(e.date), "EEEE, d 'de' MMMM", { locale: ptBR })}
+                      {formatDateOnly(e.date, "EEEE, d 'de' MMMM", { locale: ptBR })}
                     </div>
                     {e.content && <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">{e.content}</p>}
                     {e.rating != null && (

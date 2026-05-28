@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Film, Plus, Heart, Trash2, Star, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { formatDateBR, localDateKey } from "@/lib/dates";
 
 export const Route = createFileRoute("/_app/filmes")({ component: FilmesPage });
 
@@ -25,7 +25,7 @@ type Movie = {
 };
 
 const empty = () => ({
-  name: "", watched_date: format(new Date(), "yyyy-MM-dd"),
+  name: "", watched_date: localDateKey(),
   rating: 8, platform: "", genre: "", review: "", tags: [] as string[],
 });
 
@@ -41,7 +41,7 @@ function FilmesPage() {
     if (!open) return;
     setForm(editing ? {
       name: editing.name,
-      watched_date: editing.watched_date ?? format(new Date(), "yyyy-MM-dd"),
+      watched_date: editing.watched_date ?? localDateKey(),
       rating: editing.rating ?? 8,
       platform: editing.platform ?? "",
       genre: editing.genre ?? "",
@@ -119,7 +119,7 @@ function FilmesPage() {
                 <div className="min-w-0 flex-1">
                   <div className="font-display text-lg leading-snug">{m.name}</div>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    {m.watched_date && <span>{format(new Date(m.watched_date), "dd/MM/yy")}</span>}
+                    {m.watched_date && <span>{formatDateBR(m.watched_date, true)}</span>}
                     {m.platform && <span className="rounded-full bg-accent px-2 py-0.5">{m.platform}</span>}
                     {m.genre && <span>· {m.genre}</span>}
                   </div>

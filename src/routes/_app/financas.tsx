@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Wallet, Plus, Pencil, Trash2, TrendingUp, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth } from "date-fns";
+import { formatDateBR, localDateKey } from "@/lib/dates";
 
 export const Route = createFileRoute("/_app/financas")({ component: FinancasPage });
 
@@ -26,7 +27,7 @@ type Fin = {
 const PAY = ["pix", "crédito", "débito", "dinheiro"];
 const empty = () => ({
   kind: "expense", amount: 0, category: "", description: "",
-  date: format(new Date(), "yyyy-MM-dd"), payment_method: "pix", installments: 1, notes: "", tags: [] as string[],
+  date: localDateKey(), payment_method: "pix", installments: 1, notes: "", tags: [] as string[],
 });
 
 function fmtBRL(n: number) { return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
@@ -72,8 +73,9 @@ function FinancasPage() {
   };
 
   const now = new Date();
-  const s = startOfMonth(now), e = endOfMonth(now);
-  const month = (list ?? []).filter((x) => new Date(x.date) >= s && new Date(x.date) <= e);
+  const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
+  const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");
+  const month = (list ?? []).filter((x) => x.date >= monthStart && x.date <= monthEnd);
   const income = month.filter((x) => x.kind === "income").reduce((a, x) => a + Number(x.amount), 0);
   const expense = month.filter((x) => x.kind === "expense").reduce((a, x) => a + Number(x.amount), 0);
   const cats = month.filter((x) => x.kind === "expense").reduce<Record<string, number>>((acc, x) => {
@@ -137,7 +139,7 @@ function FinancasPage() {
               <div className="min-w-0 flex-1">
                 <div className="font-medium">{x.description || x.category || "Registro"}</div>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span>{format(new Date(x.date), "dd/MM/yyyy")}</span>
+                  <span>{formatDateBR(x.date)}</span>
                   {x.category && <span>· {x.category}</span>}
                   {x.payment_method && <span>· {x.payment_method}</span>}
                   {x.installments && x.installments > 1 ? <span>· {x.installments}x</span> : null}

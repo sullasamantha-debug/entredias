@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Mic, Plus, Heart, Clock, Trash2, Pencil, Search, Star, Headphones, Bookmark } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { formatDateBR } from "@/lib/dates";
 
 export const Route = createFileRoute("/_app/podcasts/")({ component: PodcastsPage });
 
@@ -331,7 +331,7 @@ function FavoritesView({ shows, eps, search }: { shows: Show[]; eps: Ep[]; searc
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium">{e.title}</div>
                     <div className="truncate text-xs text-muted-foreground">
-                      {sh?.name ?? "—"}{e.listened_date ? ` · ${format(new Date(e.listened_date), "dd/MM/yyyy")}` : ""}
+                      {sh?.name ?? "—"}{e.listened_date ? ` · ${formatDateBR(e.listened_date)}` : ""}
                     </div>
                   </div>
                 </Link>

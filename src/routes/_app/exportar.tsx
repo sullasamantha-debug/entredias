@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/cozy";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { localDateKey } from "@/lib/dates";
 
 export const Route = createFileRoute("/_app/exportar")({ component: ExportarPage });
 
@@ -43,7 +43,7 @@ function ExportarPage() {
       }
       const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
       saveAs(new Blob([buf], { type: "application/octet-stream" }),
-        `entre-dias-${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+        `entre-dias-${localDateKey()}.xlsx`);
       toast.success("Backup gerado ✨");
     } catch (e: any) { toast.error(e.message); }
     finally { setLoading(false); }
@@ -55,7 +55,7 @@ function ExportarPage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data ?? []), label.slice(0, 31));
     const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    saveAs(new Blob([buf], { type: "application/octet-stream" }), `${key}-${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+    saveAs(new Blob([buf], { type: "application/octet-stream" }), `${key}-${localDateKey()}.xlsx`);
   };
 
   return (

@@ -10,8 +10,9 @@ import {
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar,
 } from "recharts";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, subDays, isSameDay, parseISO, differenceInCalendarDays, addYears, isAfter } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, subDays, isSameDay, differenceInCalendarDays, addYears, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatDateOnly, localDateKey, parseDateOnly } from "@/lib/dates";
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
@@ -20,8 +21,8 @@ export const Route = createFileRoute("/_app/dashboard")({
 function Dashboard() {
   const { user } = useAuth();
   const today = new Date();
-  const monthStart = startOfMonth(today).toISOString().slice(0, 10);
-  const monthEnd = endOfMonth(today).toISOString().slice(0, 10);
+  const monthStart = format(startOfMonth(today), "yyyy-MM-dd");
+  const monthEnd = format(endOfMonth(today), "yyyy-MM-dd");
 
   const { data } = useQuery({
     enabled: !!user,
@@ -29,12 +30,12 @@ function Dashboard() {
     queryFn: async () => {
       const [habits, habitLogs, podcasts, movies, series, books, events, birthdays, diary] = await Promise.all([
         supabase.from("habits").select("*").eq("archived", false),
-        supabase.from("habit_logs").select("*").gte("date", format(subDays(today, 120), "yyyy-MM-dd")),
+        supabase.from("habit_logs").select("*").gte("date", localDateKey(subDays(today, 120))),
         supabase.from("podcasts").select("*").gte("date", monthStart).lte("date", monthEnd),
         supabase.from("movies").select("*").gte("watched_date", monthStart).lte("watched_date", monthEnd),
         supabase.from("series").select("episodes_watched, status"),
         supabase.from("books").select("status, end_date").eq("status", "concluido"),
-        supabase.from("events").select("*").gte("date", format(today, "yyyy-MM-dd")).order("date").limit(5),
+        supabase.from("events").select("*").gte("date", localDateKey(today)).order("date").limit(5),
         supabase.from("birthdays").select("*"),
         supabase.from("diary_entries").select("date, mood, rating").gte("date", monthStart).lte("date", monthEnd),
       ]);
@@ -52,7 +53,7 @@ function Dashboard() {
     },
   });
 
-  const todayStr = format(today, "yyyy-MM-dd");
+  const todayStr = localDateKey(today);
   const habitsToday = data?.habitLogs.filter((l) => l.date === todayStr && l.done).length ?? 0;
   const totalHabits = data?.habits.length ?? 0;
   const episodes = data?.series.reduce((sum, s) => sum + (s.episodes_watched ?? 0), 0) ?? 0;
@@ -62,7 +63,7 @@ function Dashboard() {
     if (!data) return 0;
     let s = 0;
     for (let i = 0; i < 120; i++) {
-      const d = format(subDays(today, i), "yyyy-MM-dd");
+      const d = localDateKey(subDays(today, i));
       if (data.habitLogs.some((l) => l.date === d && l.done)) s++;
       else if (i > 0) break;
     }
@@ -78,7 +79,7 @@ function Dashboard() {
   // Heatmap last 120 days
   const days = eachDayOfInterval({ start: subDays(today, 119), end: today });
   const heat = days.map((d) => {
-    const k = format(d, "yyyy-MM-dd");
+    const k = localDateKey(d);
     const count = data?.habitLogs.filter((l) => l.date === k && l.done).length ?? 0;
     return { date: k, count };
   });
@@ -86,7 +87,7 @@ function Dashboard() {
   // Monthly chart: habits done per day in current month
   const monthDays = eachDayOfInterval({ start: startOfMonth(today), end: endOfMonth(today) });
   const monthChart = monthDays.map((d) => {
-    const k = format(d, "yyyy-MM-dd");
+    const k = localDateKey(d);
     return {
       day: format(d, "d"),
       habitos: data?.habitLogs.filter((l) => l.date === k && l.done).length ?? 0,
@@ -103,7 +104,7 @@ function Dashboard() {
   // Next birthdays
   const upcomingBdays = (data?.birthdays ?? [])
     .map((b) => {
-      const d = parseISO(b.date);
+      const d = parseDateOnly(b.date);
       let next = new Date(today.getFullYear(), d.getMonth(), d.getDate());
       if (!isAfter(next, subDays(today, 1))) next = addYears(next, 1);
       return { ...b, next, days: differenceInCalendarDays(next, today) };
@@ -201,8 +202,8 @@ function Dashboard() {
               {data.events.map((e) => (
                 <li key={e.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
                   <div className="grid h-10 w-10 place-items-center rounded-xl bg-blush/30 text-center">
-                    <div className="font-display text-sm leading-none">{format(parseISO(e.date), "d")}</div>
-                    <div className="text-[9px] uppercase text-muted-foreground">{format(parseISO(e.date), "MMM", { locale: ptBR })}</div>
+                    <div className="font-display text-sm leading-none">{formatDateOnly(e.date, "d")}</div>
+                    <div className="text-[9px] uppercase text-muted-foreground">{formatDateOnly(e.date, "MMM", { locale: ptBR })}</div>
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">{e.title}</div>

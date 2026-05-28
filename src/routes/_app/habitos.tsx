@@ -17,6 +17,7 @@ import {
   startOfWeek, endOfWeek, addMonths, subMonths, isSameMonth, isSameDay, isAfter, startOfYear, endOfYear,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { localDateKey, parseDateOnly } from "@/lib/dates";
 
 export const Route = createFileRoute("/_app/habitos")({ component: HabitosPage });
 
@@ -64,7 +65,7 @@ function HabitosPage() {
 
   const toggle = async (habitId: string, date: string) => {
     if (!user || !data) return;
-    if (isAfter(new Date(date), today)) return;
+    if (isAfter(parseDateOnly(date), today)) return;
     const existing = data.logs.find((l) => l.habit_id === habitId && l.date === date);
     if (existing) await supabase.from("habit_logs").delete().eq("id", existing.id);
     else await supabase.from("habit_logs").insert({ habit_id: habitId, date, user_id: user.id, done: true });
@@ -88,7 +89,7 @@ function HabitosPage() {
     if (!data) return 0;
     let s = 0;
     for (let i = 0; i < 365; i++) {
-      const d = format(subDays(today, i), "yyyy-MM-dd");
+      const d = localDateKey(subDays(today, i));
       if (data.logs.some((l) => l.habit_id === habitId && l.date === d && l.done)) s++;
       else if (i > 0) break;
     }
@@ -97,7 +98,7 @@ function HabitosPage() {
   const monthPct = (habitId: string) => {
     if (!data) return 0;
     const m = eachDayOfInterval({ start: startOfMonth(cursor), end: endOfMonth(cursor) });
-    const done = m.filter((d) => data.logs.some((l) => l.habit_id === habitId && l.date === format(d, "yyyy-MM-dd") && l.done)).length;
+    const done = m.filter((d) => data.logs.some((l) => l.habit_id === habitId && l.date === localDateKey(d) && l.done)).length;
     return Math.round((done / m.length) * 100);
   };
 
@@ -172,7 +173,7 @@ function HabitosPage() {
                   </div>
                   <div className="mt-1 grid grid-cols-7 gap-1">
                     {grid.map((d) => {
-                      const k = format(d, "yyyy-MM-dd");
+                      const k = localDateKey(d);
                       const inMonth = isSameMonth(d, cursor);
                       const future = isAfter(d, today);
                       const isToday = isSameDay(d, today);
@@ -195,7 +196,7 @@ function HabitosPage() {
                   <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">Heatmap anual — {format(cursor, "yyyy")}</summary>
                   <div className="mt-3 flex flex-wrap gap-[2px]">
                     {yearDays.map((d) => {
-                      const k = format(d, "yyyy-MM-dd");
+                      const k = localDateKey(d);
                       const done = data.logs.some((l) => l.habit_id === h.id && l.date === k && l.done);
                       return (
                         <div key={k} title={k} className="h-3 w-3 rounded-sm"
