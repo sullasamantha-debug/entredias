@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tv, Plus, Trash2, Star, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { formatDateBR } from "@/lib/dates";
 
 export const Route = createFileRoute("/_app/series")({ component: SeriesPage });
 
@@ -147,7 +147,7 @@ function SeriesPage() {
                         s.status === "finalizada" ? "bg-mint/50" : s.status === "pausada" ? "bg-sand/60" : "bg-primary/15"
                       }`}>{s.status}</span>
                       {s.rating != null && <span className="flex items-center gap-0.5"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{s.rating}</span>}
-                      {s.end_date && <span>· {format(new Date(s.end_date), "dd/MM/yy")}</span>}
+                      {s.end_date && <span>· {formatDateBR(s.end_date, true)}</span>}
                     </div>
                     <div className="mt-3">
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
