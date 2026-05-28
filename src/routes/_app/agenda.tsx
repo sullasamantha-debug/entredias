@@ -18,7 +18,7 @@ import {
   isSameDay, isSameMonth, startOfWeek, endOfWeek,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { formatDateBR, formatDateOnly, localDateKey, parseDateOnly } from "@/lib/dates";
+import { formatDateBR, localDateKey, parseDateOnly } from "@/lib/dates";
 
 export const Route = createFileRoute("/_app/agenda")({ component: AgendaPage });
 
