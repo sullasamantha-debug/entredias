@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Heart, Pencil, Trash2, ChevronLeft, Star, Clock } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { formatDateBR, localDateKey } from "@/lib/dates";
 
 export const Route = createFileRoute("/_app/podcasts/$showId")({ component: ShowPage });
 
@@ -42,7 +42,7 @@ function statusBadge(v: string) {
 
 const empty = () => ({
   title: "", status: "want" as EpStatus,
-  listened_date: format(new Date(), "yyyy-MM-dd"),
+  listened_date: localDateKey(),
   h: 0, m: 30, s: 0, rating: 5, notes: "",
 });
 
@@ -63,7 +63,7 @@ function ShowPage() {
       setForm({
         title: editing.title,
         status: (editing.status === "listened" ? "listened" : "want") as EpStatus,
-        listened_date: editing.listened_date ?? format(new Date(), "yyyy-MM-dd"),
+        listened_date: editing.listened_date ?? localDateKey(),
         h: Math.floor(sec / 3600), m: Math.floor((sec % 3600) / 60), s: sec % 60,
         rating: editing.rating ?? 5, notes: editing.notes ?? "",
       });
@@ -117,7 +117,7 @@ function ShowPage() {
 
   const setStatus = async (e: Ep, status: EpStatus) => {
     const patch = status === "listened" && !e.listened_date
-      ? { status, listened_date: format(new Date(), "yyyy-MM-dd") }
+      ? { status, listened_date: localDateKey() }
       : { status };
     await supabase.from("podcast_episodes").update(patch).eq("id", e.id);
     qc.invalidateQueries({ queryKey: ["show", showId] });
@@ -231,7 +231,7 @@ function ShowPage() {
                     <span className={`rounded-full px-2 py-0.5 text-[10px] ${sb.cls}`}>{sb.label}</span>
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    {e.listened_date && <span>{format(new Date(e.listened_date), "dd/MM/yyyy")}</span>}
+                    {e.listened_date && <span>{formatDateBR(e.listened_date)}</span>}
                     {e.duration_seconds ? <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />{fmt(e.duration_seconds)}</span> : null}
                     {e.status === "listened" && e.rating != null && <span className="inline-flex items-center gap-1"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{e.rating}</span>}
                   </div>
