@@ -45,7 +45,7 @@ function AgendaPage() {
     setForm(editing ? {
       title: editing.title, date: editing.date, time_str: editing.time_str ?? "",
       type: editing.type ?? "evento", description: editing.description ?? "",
-    } : empty(selected ? format(selected, "yyyy-MM-dd") : undefined));
+    } : empty(selected ? localDateKey(selected) : undefined));
   }, [open, editing, selected]);
 
   const { data: events } = useQuery({
@@ -118,7 +118,7 @@ function AgendaPage() {
         </div>
         <div className="mt-1 grid grid-cols-7 gap-1">
           {grid.map((d) => {
-            const k = format(d, "yyyy-MM-dd");
+            const k = localDateKey(d);
             const dayEvents = (events ?? []).filter((e) => e.date === k);
             const isThisMonth = isSameMonth(d, cursor);
             const isToday = isSameDay(d, new Date());
