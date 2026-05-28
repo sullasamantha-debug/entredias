@@ -13,8 +13,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Cake, Plus, Trash2, Gift, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { format, parseISO, addYears, differenceInCalendarDays, isAfter, subDays } from "date-fns";
+import { format, addYears, differenceInCalendarDays, isAfter, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateOnly } from "@/lib/dates";
 
 export const Route = createFileRoute("/_app/aniversarios")({ component: AniversariosPage });
 
@@ -64,7 +65,7 @@ function AniversariosPage() {
   const today = new Date();
   const enriched = (list ?? [])
     .map((b) => {
-      const d = parseISO(b.date);
+      const d = parseDateOnly(b.date);
       let next = new Date(today.getFullYear(), d.getMonth(), d.getDate());
       if (!isAfter(next, subDays(today, 1))) next = addYears(next, 1);
       return { ...b, next, daysAway: differenceInCalendarDays(next, today), age: today.getFullYear() - d.getFullYear() };
