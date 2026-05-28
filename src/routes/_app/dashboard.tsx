@@ -202,8 +202,8 @@ function Dashboard() {
               {data.events.map((e) => (
                 <li key={e.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
                   <div className="grid h-10 w-10 place-items-center rounded-xl bg-blush/30 text-center">
-                    <div className="font-display text-sm leading-none">{format(parseISO(e.date), "d")}</div>
-                    <div className="text-[9px] uppercase text-muted-foreground">{format(parseISO(e.date), "MMM", { locale: ptBR })}</div>
+                    <div className="font-display text-sm leading-none">{formatDateOnly(e.date, "d")}</div>
+                    <div className="text-[9px] uppercase text-muted-foreground">{formatDateOnly(e.date, "MMM", { locale: ptBR })}</div>
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">{e.title}</div>
