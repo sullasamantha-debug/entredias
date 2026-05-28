@@ -15,9 +15,10 @@ import { Calendar as CalIcon, Plus, ChevronLeft, ChevronRight, Trash2, Check, Pe
 import { toast } from "sonner";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths,
-  isSameDay, parseISO, isSameMonth, startOfWeek, endOfWeek,
+  isSameDay, isSameMonth, startOfWeek, endOfWeek,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatDateBR, formatDateOnly, localDateKey, parseDateOnly } from "@/lib/dates";
 
 export const Route = createFileRoute("/_app/agenda")({ component: AgendaPage });
 
@@ -26,7 +27,7 @@ const TYPES = ["evento", "compromisso", "meta", "lembrete"] as const;
 type Ev = { id: string; title: string; date: string; time_str: string | null; type: string | null; description: string | null; completed: boolean };
 
 const empty = (date?: string) => ({
-  title: "", date: date ?? format(new Date(), "yyyy-MM-dd"), time_str: "", type: "evento", description: "",
+  title: "", date: date ?? localDateKey(), time_str: "", type: "evento", description: "",
 });
 
 function AgendaPage() {
@@ -75,7 +76,7 @@ function AgendaPage() {
     return eachDayOfInterval({ start, end });
   }, [cursor]);
 
-  const selectedEvents = (events ?? []).filter((e) => selected && isSameDay(parseISO(e.date), selected));
+  const selectedEvents = (events ?? []).filter((e) => selected && isSameDay(parseDateOnly(e.date), selected));
 
   return (
     <div>
@@ -159,7 +160,7 @@ function AgendaPage() {
                 <div className="min-w-0 flex-1">
                   <div className={`text-sm font-medium ${e.completed ? "line-through text-muted-foreground" : ""}`}>{e.title}</div>
                   <div className="text-xs text-muted-foreground">
-                    {format(parseISO(e.date), "dd/MM")} {e.time_str ? `· ${e.time_str}` : ""} · {e.type}
+                    {formatDateBR(e.date).slice(0, 5)} {e.time_str ? `· ${e.time_str}` : ""} · {e.type}
                   </div>
                 </div>
                 <button onClick={() => { setEditing(e); setOpen(true); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"><Pencil className="h-4 w-4" /></button>
