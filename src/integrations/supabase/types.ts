@@ -98,6 +98,66 @@ export type Database = {
         }
         Relationships: []
       }
+      budgets: {
+        Row: {
+          amount: number
+          category: string | null
+          created_at: string
+          id: string
+          month: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          category?: string | null
+          created_at?: string
+          id?: string
+          month: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          created_at?: string
+          id?: string
+          month?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      credit_cards: {
+        Row: {
+          card_limit: number
+          closing_day: number
+          color: string | null
+          created_at: string
+          due_day: number
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          card_limit?: number
+          closing_day?: number
+          color?: string | null
+          created_at?: string
+          due_day?: number
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          card_limit?: number
+          closing_day?: number
+          color?: string | null
+          created_at?: string
+          due_day?: number
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       diary_entries: {
         Row: {
           anxiety: number | null
@@ -182,45 +242,78 @@ export type Database = {
         }
         Relationships: []
       }
+      finance_settings: {
+        Row: {
+          created_at: string
+          id: string
+          initial_balance: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          initial_balance?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          initial_balance?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       finances: {
         Row: {
           amount: number
+          card_id: string | null
           category: string | null
           created_at: string
           date: string
           description: string | null
           id: string
           installments: number | null
+          invoice_month: string | null
           kind: string
           notes: string | null
+          paid: boolean
           payment_method: string | null
           tags: string[] | null
           user_id: string
         }
         Insert: {
           amount?: number
+          card_id?: string | null
           category?: string | null
           created_at?: string
           date?: string
           description?: string | null
           id?: string
           installments?: number | null
+          invoice_month?: string | null
           kind?: string
           notes?: string | null
+          paid?: boolean
           payment_method?: string | null
           tags?: string[] | null
           user_id: string
         }
         Update: {
           amount?: number
+          card_id?: string | null
           category?: string | null
           created_at?: string
           date?: string
           description?: string | null
           id?: string
           installments?: number | null
+          invoice_month?: string | null
           kind?: string
           notes?: string | null
+          paid?: boolean
           payment_method?: string | null
           tags?: string[] | null
           user_id?: string
@@ -321,6 +414,39 @@ export type Database = {
           icon?: string | null
           id?: string
           name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      investments: {
+        Row: {
+          category: string | null
+          created_at: string
+          current_amount: number
+          id: string
+          invested_amount: number
+          name: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          current_amount?: number
+          id?: string
+          invested_amount?: number
+          name: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          current_amount?: number
+          id?: string
+          invested_amount?: number
+          name?: string
+          notes?: string | null
           user_id?: string
         }
         Relationships: []
@@ -519,6 +645,75 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+        }
+        Relationships: []
+      }
+      savings_jars: {
+        Row: {
+          color: string | null
+          created_at: string
+          current_amount: number
+          goal: number | null
+          icon: string | null
+          id: string
+          name: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          current_amount?: number
+          goal?: number | null
+          icon?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          current_amount?: number
+          goal?: number | null
+          icon?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      savings_movements: {
+        Row: {
+          amount: number
+          created_at: string
+          date: string
+          id: string
+          jar_id: string
+          kind: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          date?: string
+          id?: string
+          jar_id: string
+          kind?: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date?: string
+          id?: string
+          jar_id?: string
+          kind?: string
+          notes?: string | null
+          user_id?: string
         }
         Relationships: []
       }
