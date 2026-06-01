@@ -91,19 +91,21 @@ function FinancasPage() {
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="mb-4 flex w-full flex-wrap justify-start gap-1 bg-transparent p-0">
-          {[
-            ["overview", "Visão geral"],
-            ["tx", "Transações"],
-            ["cards", "Cartões"],
-            ["jars", "Cofrinhos"],
-            ["invs", "Investimentos"],
-            ["budget", "Orçamento"],
-            ["config", "Configurações"],
-          ].map(([v, l]) => (
-            <TabsTrigger key={v} value={v} className="rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{l}</TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="-mx-4 mb-4 overflow-x-auto px-4 md:mx-0 md:px-0">
+          <TabsList className="flex w-max gap-1 bg-transparent p-0 md:w-full md:flex-wrap md:justify-start">
+            {[
+              ["overview", "Visão geral"],
+              ["tx", "Transações"],
+              ["cards", "Cartões"],
+              ["jars", "Cofrinhos"],
+              ["invs", "Investimentos"],
+              ["budget", "Orçamento"],
+              ["config", "Configurações"],
+            ].map(([v, l]) => (
+              <TabsTrigger key={v} value={v} className="shrink-0 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{l}</TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
         <TabsContent value="overview"><Overview fins={fins ?? []} budgets={budgets ?? []} cards={cards ?? []} income={income} realExpense={realExpense} futureCardExpense={futureCardExpense} patrimony={patrimony} /></TabsContent>
         <TabsContent value="tx"><Transactions fins={fins ?? []} cards={cards ?? []} /></TabsContent>
