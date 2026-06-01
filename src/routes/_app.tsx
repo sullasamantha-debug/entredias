@@ -26,6 +26,7 @@ function AppShell() {
     <div className="flex min-h-screen bg-background">
       <AppSidebar />
       <main className="relative flex-1 pb-24 md:pb-0">
+        <MobileTopBar />
         <div className="absolute inset-x-0 top-0 -z-10 h-72 gradient-soft opacity-50" />
         <AnimatePresence mode="wait">
           <motion.div
