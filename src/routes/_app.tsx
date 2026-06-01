@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { AppSidebar, MobileTabBar } from "@/components/AppSidebar";
+import { AppSidebar, MobileTabBar, MobileTopBar } from "@/components/AppSidebar";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouterState } from "@tanstack/react-router";
 
