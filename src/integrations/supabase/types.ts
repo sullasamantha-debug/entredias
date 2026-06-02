@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts: {
+        Row: {
+          archived: boolean
+          color: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          initial_balance: number
+          name: string
+          notes: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          archived?: boolean
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          initial_balance?: number
+          name: string
+          notes?: string | null
+          type?: string
+          user_id: string
+        }
+        Update: {
+          archived?: boolean
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          initial_balance?: number
+          name?: string
+          notes?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       birthdays: {
         Row: {
           category: string | null
@@ -268,6 +307,7 @@ export type Database = {
       }
       finances: {
         Row: {
+          account_id: string | null
           amount: number
           card_id: string | null
           category: string | null
@@ -282,9 +322,11 @@ export type Database = {
           paid: boolean
           payment_method: string | null
           tags: string[] | null
+          to_account_id: string | null
           user_id: string
         }
         Insert: {
+          account_id?: string | null
           amount?: number
           card_id?: string | null
           category?: string | null
@@ -299,9 +341,11 @@ export type Database = {
           paid?: boolean
           payment_method?: string | null
           tags?: string[] | null
+          to_account_id?: string | null
           user_id: string
         }
         Update: {
+          account_id?: string | null
           amount?: number
           card_id?: string | null
           category?: string | null
@@ -316,6 +360,7 @@ export type Database = {
           paid?: boolean
           payment_method?: string | null
           tags?: string[] | null
+          to_account_id?: string | null
           user_id?: string
         }
         Relationships: []
