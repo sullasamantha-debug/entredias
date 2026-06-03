@@ -34,6 +34,7 @@ type Fin = {
 type Settings = { id: string; initial_balance: number };
 type Account = {
   id: string; name: string; type: string; initial_balance: number;
+  initial_balance_date: string;
   color: string | null; icon: string | null; notes: string | null; archived: boolean;
 };
 type Jar = { id: string; name: string; current_amount: number; goal: number | null; color: string | null; icon: string | null; notes: string | null };
