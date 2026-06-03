@@ -325,6 +325,11 @@ function AccountsTab({ accounts, fins, today }: { accounts: Account[]; fins: Fin
               </div>
               <div><Label>Saldo inicial</Label><Input type="number" step="0.01" value={form.initial_balance} onChange={e => setForm({ ...form, initial_balance: +e.target.value })} /></div>
             </div>
+            <div>
+              <Label>Data do saldo inicial</Label>
+              <Input type="date" value={form.initial_balance_date} onChange={e => setForm({ ...form, initial_balance_date: e.target.value })} />
+              <p className="mt-1 text-xs text-muted-foreground">Movimentações anteriores a essa data não afetam o saldo desta conta.</p>
+            </div>
             <div><Label>Cor</Label><Input type="color" value={form.color} onChange={e => setForm({ ...form, color: e.target.value })} /></div>
             <div><Label>Observações</Label><Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
             <Button onClick={save} className="w-full rounded-full">{editing ? "Salvar" : "Adicionar"}</Button>
