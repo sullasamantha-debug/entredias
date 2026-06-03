@@ -34,6 +34,7 @@ type Fin = {
 type Settings = { id: string; initial_balance: number };
 type Account = {
   id: string; name: string; type: string; initial_balance: number;
+  initial_balance_date: string;
   color: string | null; icon: string | null; notes: string | null; archived: boolean;
 };
 type Jar = { id: string; name: string; current_amount: number; goal: number | null; color: string | null; icon: string | null; notes: string | null };
@@ -56,8 +57,10 @@ const ACCOUNT_TYPE_LABEL = Object.fromEntries(ACCOUNT_TYPES.map(t => [t.value, t
 // Compute per-account balance considering income, expenses (paid only), and transfers
 function balanceFor(account: Account, fins: Fin[], today: string) {
   let bal = Number(account.initial_balance) || 0;
+  const since = account.initial_balance_date || "0000-01-01";
   for (const f of fins) {
     if (f.date > today) continue;
+    if (f.date < since) continue;
     const amt = Number(f.amount) || 0;
     if (f.kind === "income" && f.account_id === account.id) bal += amt;
     else if (f.kind === "expense" && f.paid && f.account_id === account.id) bal -= amt;
@@ -272,13 +275,14 @@ function AccountsTab({ accounts, fins, today }: { accounts: Account[]; fins: Fin
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Account | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
-  const empty = { name: "", type: "corrente", initial_balance: 0, color: "#7dd3fc", icon: "Wallet", notes: "" };
+  const empty = { name: "", type: "corrente", initial_balance: 0, initial_balance_date: localDateKey(), color: "#7dd3fc", icon: "Wallet", notes: "" };
   const [form, setForm] = useState(empty);
 
   useEffect(() => {
     if (!open) return;
     setForm(editing ? {
       name: editing.name, type: editing.type, initial_balance: Number(editing.initial_balance),
+      initial_balance_date: editing.initial_balance_date || localDateKey(),
       color: editing.color ?? "#7dd3fc", icon: editing.icon ?? "Wallet", notes: editing.notes ?? "",
     } : empty);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -321,6 +325,11 @@ function AccountsTab({ accounts, fins, today }: { accounts: Account[]; fins: Fin
               </div>
               <div><Label>Saldo inicial</Label><Input type="number" step="0.01" value={form.initial_balance} onChange={e => setForm({ ...form, initial_balance: +e.target.value })} /></div>
             </div>
+            <div>
+              <Label>Data do saldo inicial</Label>
+              <Input type="date" value={form.initial_balance_date} onChange={e => setForm({ ...form, initial_balance_date: e.target.value })} />
+              <p className="mt-1 text-xs text-muted-foreground">Movimentações anteriores a essa data não afetam o saldo desta conta.</p>
+            </div>
             <div><Label>Cor</Label><Input type="color" value={form.color} onChange={e => setForm({ ...form, color: e.target.value })} /></div>
             <div><Label>Observações</Label><Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
             <Button onClick={save} className="w-full rounded-full">{editing ? "Salvar" : "Adicionar"}</Button>
@@ -355,7 +364,7 @@ function AccountsTab({ accounts, fins, today }: { accounts: Account[]; fins: Fin
                   </div>
                 </div>
                 <div className={`font-display text-2xl ${bal < 0 ? "text-rose-600" : ""}`}>{fmtBRL(bal)}</div>
-                <div className="text-xs text-muted-foreground">Inicial: {fmtBRL(Number(ac.initial_balance))}</div>
+                <div className="text-xs text-muted-foreground">Inicial: {fmtBRL(Number(ac.initial_balance))} · desde {formatDateBR(ac.initial_balance_date)}</div>
                 {ac.notes && <p className="mt-2 text-sm text-muted-foreground">{ac.notes}</p>}
                 {recent.length > 0 && (
                   <div className="mt-4 border-t pt-3">
