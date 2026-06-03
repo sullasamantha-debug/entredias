@@ -1,0 +1,1 @@
+ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS initial_balance_date date NOT NULL DEFAULT CURRENT_DATE;
