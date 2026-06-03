@@ -275,13 +275,14 @@ function AccountsTab({ accounts, fins, today }: { accounts: Account[]; fins: Fin
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Account | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
-  const empty = { name: "", type: "corrente", initial_balance: 0, color: "#7dd3fc", icon: "Wallet", notes: "" };
+  const empty = { name: "", type: "corrente", initial_balance: 0, initial_balance_date: localDateKey(), color: "#7dd3fc", icon: "Wallet", notes: "" };
   const [form, setForm] = useState(empty);
 
   useEffect(() => {
     if (!open) return;
     setForm(editing ? {
       name: editing.name, type: editing.type, initial_balance: Number(editing.initial_balance),
+      initial_balance_date: editing.initial_balance_date || localDateKey(),
       color: editing.color ?? "#7dd3fc", icon: editing.icon ?? "Wallet", notes: editing.notes ?? "",
     } : empty);
     // eslint-disable-next-line react-hooks/exhaustive-deps
