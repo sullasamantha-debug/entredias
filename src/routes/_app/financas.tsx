@@ -57,8 +57,10 @@ const ACCOUNT_TYPE_LABEL = Object.fromEntries(ACCOUNT_TYPES.map(t => [t.value, t
 // Compute per-account balance considering income, expenses (paid only), and transfers
 function balanceFor(account: Account, fins: Fin[], today: string) {
   let bal = Number(account.initial_balance) || 0;
+  const since = account.initial_balance_date || "0000-01-01";
   for (const f of fins) {
     if (f.date > today) continue;
+    if (f.date < since) continue;
     const amt = Number(f.amount) || 0;
     if (f.kind === "income" && f.account_id === account.id) bal += amt;
     else if (f.kind === "expense" && f.paid && f.account_id === account.id) bal -= amt;
