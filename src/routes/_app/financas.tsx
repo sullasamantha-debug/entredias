@@ -364,7 +364,7 @@ function AccountsTab({ accounts, fins, today }: { accounts: Account[]; fins: Fin
                   </div>
                 </div>
                 <div className={`font-display text-2xl ${bal < 0 ? "text-rose-600" : ""}`}>{fmtBRL(bal)}</div>
-                <div className="text-xs text-muted-foreground">Inicial: {fmtBRL(Number(ac.initial_balance))}</div>
+                <div className="text-xs text-muted-foreground">Inicial: {fmtBRL(Number(ac.initial_balance))} · desde {formatDateBR(ac.initial_balance_date)}</div>
                 {ac.notes && <p className="mt-2 text-sm text-muted-foreground">{ac.notes}</p>}
                 {recent.length > 0 && (
                   <div className="mt-4 border-t pt-3">
