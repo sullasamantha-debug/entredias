@@ -37,8 +37,8 @@ type Account = {
   initial_balance_date: string;
   color: string | null; icon: string | null; notes: string | null; archived: boolean;
 };
-type Jar = { id: string; name: string; current_amount: number; goal: number | null; color: string | null; icon: string | null; notes: string | null };
-type Inv = { id: string; name: string; category: string | null; invested_amount: number; current_amount: number; notes: string | null };
+type Jar = { id: string; name: string; current_amount: number; goal: number | null; color: string | null; icon: string | null; notes: string | null; account_id: string | null };
+type Inv = { id: string; name: string; category: string | null; invested_amount: number; current_amount: number; notes: string | null; institution: string | null; invested_date: string | null };
 type Card = { id: string; name: string; card_limit: number; closing_day: number; due_day: number; color: string | null };
 type Budget = { id: string; month: string; category: string | null; amount: number };
 
