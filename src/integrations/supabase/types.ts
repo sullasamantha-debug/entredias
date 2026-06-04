@@ -472,7 +472,9 @@ export type Database = {
           created_at: string
           current_amount: number
           id: string
+          institution: string | null
           invested_amount: number
+          invested_date: string | null
           name: string
           notes: string | null
           user_id: string
@@ -482,7 +484,9 @@ export type Database = {
           created_at?: string
           current_amount?: number
           id?: string
+          institution?: string | null
           invested_amount?: number
+          invested_date?: string | null
           name: string
           notes?: string | null
           user_id: string
@@ -492,7 +496,9 @@ export type Database = {
           created_at?: string
           current_amount?: number
           id?: string
+          institution?: string | null
           invested_amount?: number
+          invested_date?: string | null
           name?: string
           notes?: string | null
           user_id?: string
@@ -698,6 +704,7 @@ export type Database = {
       }
       savings_jars: {
         Row: {
+          account_id: string | null
           color: string | null
           created_at: string
           current_amount: number
@@ -709,6 +716,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          account_id?: string | null
           color?: string | null
           created_at?: string
           current_amount?: number
@@ -720,6 +728,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          account_id?: string | null
           color?: string | null
           created_at?: string
           current_amount?: number

@@ -37,8 +37,8 @@ type Account = {
   initial_balance_date: string;
   color: string | null; icon: string | null; notes: string | null; archived: boolean;
 };
-type Jar = { id: string; name: string; current_amount: number; goal: number | null; color: string | null; icon: string | null; notes: string | null };
-type Inv = { id: string; name: string; category: string | null; invested_amount: number; current_amount: number; notes: string | null };
+type Jar = { id: string; name: string; current_amount: number; goal: number | null; color: string | null; icon: string | null; notes: string | null; account_id: string | null };
+type Inv = { id: string; name: string; category: string | null; invested_amount: number; current_amount: number; notes: string | null; institution: string | null; invested_date: string | null };
 type Card = { id: string; name: string; card_limit: number; closing_day: number; due_day: number; color: string | null };
 type Budget = { id: string; month: string; category: string | null; amount: number };
 
@@ -122,7 +122,8 @@ function FinancasPage() {
   const futureCardExpense = finList.filter(f => f.kind === "expense" && !f.paid && f.card_id).reduce((a, f) => a + Number(f.amount), 0);
   const totalJars = (jars ?? []).reduce((a, j) => a + Number(j.current_amount), 0);
   const totalInvs = (invs ?? []).reduce((a, i) => a + Number(i.current_amount), 0);
-  const patrimony = accountsTotal + totalJars + totalInvs;
+  // Reservas NÃO entram no patrimônio — já fazem parte das contas (são apenas uma marcação).
+  const patrimony = accountsTotal + totalInvs;
 
   return (
     <div>
@@ -131,10 +132,11 @@ function FinancasPage() {
       <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Saldo em contas" value={fmtBRL(accountsTotal)} icon={Wallet} tint="primary"
           hint={accountList.length ? `${accountList.length} conta${accountList.length > 1 ? "s" : ""}` : undefined} />
-        <StatCard label="Cofrinhos" value={fmtBRL(totalJars)} icon={PiggyBank} tint="mint" />
-        <StatCard label="Investimentos" value={fmtBRL(totalInvs)} icon={LineChart} tint="sand" />
+        <StatCard label="Reservado" value={fmtBRL(totalJars)} icon={PiggyBank} tint="mint"
+          hint="parte do saldo das contas" />
+        <StatCard label="Investido" value={fmtBRL(totalInvs)} icon={LineChart} tint="sand" />
         <StatCard label="Patrimônio total" value={fmtBRL(patrimony)} icon={Sparkles} tint="blush"
-          hint={futureCardExpense > 0 ? `−${fmtBRL(futureCardExpense)} em faturas` : undefined} />
+          hint={futureCardExpense > 0 ? `−${fmtBRL(futureCardExpense)} em faturas` : "contas + investimentos"} />
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
@@ -145,7 +147,7 @@ function FinancasPage() {
               ["accounts", "Contas"],
               ["tx", "Transações"],
               ["cards", "Cartões"],
-              ["jars", "Cofrinhos"],
+              ["jars", "Reservas"],
               ["invs", "Investimentos"],
               ["budget", "Orçamento"],
               ["config", "Configurações"],
@@ -155,11 +157,11 @@ function FinancasPage() {
           </TabsList>
         </div>
 
-        <TabsContent value="overview"><Overview fins={finList} budgets={budgets ?? []} cards={cards ?? []} accounts={accountList} accountsTotal={accountsTotal} futureCardExpense={futureCardExpense} patrimony={patrimony} today={today} /></TabsContent>
-        <TabsContent value="accounts"><AccountsTab accounts={accountList} fins={finList} today={today} /></TabsContent>
+        <TabsContent value="overview"><Overview fins={finList} budgets={budgets ?? []} cards={cards ?? []} accounts={accountList} jars={jars ?? []} invs={invs ?? []} accountsTotal={accountsTotal} totalJars={totalJars} totalInvs={totalInvs} futureCardExpense={futureCardExpense} patrimony={patrimony} today={today} /></TabsContent>
+        <TabsContent value="accounts"><AccountsTab accounts={accountList} fins={finList} jars={jars ?? []} today={today} /></TabsContent>
         <TabsContent value="tx"><Transactions fins={finList} cards={cards ?? []} accounts={accountList} /></TabsContent>
         <TabsContent value="cards"><CardsTab cards={cards ?? []} fins={finList} accounts={accountList} /></TabsContent>
-        <TabsContent value="jars"><Jars jars={jars ?? []} /></TabsContent>
+        <TabsContent value="jars"><Jars jars={jars ?? []} accounts={accountList} /></TabsContent>
         <TabsContent value="invs"><Investments invs={invs ?? []} /></TabsContent>
         <TabsContent value="budget"><BudgetTab budgets={budgets ?? []} fins={finList} /></TabsContent>
         <TabsContent value="config"><Config settings={settings ?? null} hasAccounts={accountList.length > 0} /></TabsContent>
@@ -170,8 +172,8 @@ function FinancasPage() {
 
 // ============================================================
 // OVERVIEW
-function Overview({ fins, budgets, cards, accounts, accountsTotal, futureCardExpense, patrimony, today }:
-  { fins: Fin[]; budgets: Budget[]; cards: Card[]; accounts: Account[]; accountsTotal: number; futureCardExpense: number; patrimony: number; today: string }) {
+function Overview({ fins, budgets, cards, accounts, jars, invs, accountsTotal, totalJars, totalInvs, futureCardExpense, patrimony, today }:
+  { fins: Fin[]; budgets: Budget[]; cards: Card[]; accounts: Account[]; jars: Jar[]; invs: Inv[]; accountsTotal: number; totalJars: number; totalInvs: number; futureCardExpense: number; patrimony: number; today: string }) {
   const mk = monthKey();
   const monthStart = `${mk}-01`;
   const next = addMonth(mk, 1);
@@ -191,7 +193,21 @@ function Overview({ fins, budgets, cards, accounts, accountsTotal, futureCardExp
   const accMax = Math.max(1, ...accBalances.map(a => Math.abs(a.bal)));
   const biggest = accBalances.slice().sort((a, b) => b.bal - a.bal)[0];
 
+  const jarMax = Math.max(1, ...jars.map(j => Number(j.current_amount)));
+  const invMax = Math.max(1, ...invs.map(i => Number(i.current_amount)));
+  const biggestInv = invs.slice().sort((a, b) => Number(b.current_amount) - Number(a.current_amount))[0];
+
   const insights: string[] = [];
+  if (patrimony > 0 && totalInvs > 0) insights.push(`${Math.round((totalInvs / patrimony) * 100)}% do seu patrimônio está investido.`);
+  for (const j of jars) {
+    const goal = Number(j.goal ?? 0);
+    if (goal > 0) {
+      const pct = Math.round((Number(j.current_amount) / goal) * 100);
+      if (pct >= 100) insights.push(`Sua reserva "${j.name}" já atingiu a meta.`);
+      else if (pct >= 50) insights.push(`Sua reserva "${j.name}" já atingiu ${pct}% da meta.`);
+    }
+  }
+  if (biggestInv) insights.push(`O ${biggestInv.name} representa seu maior investimento (${fmtBRL(Number(biggestInv.current_amount))}).`);
   const totalBudget = budgets.find(b => b.month === mk && !b.category);
   if (totalBudget && monthOut > Number(totalBudget.amount)) insights.push(`Você ultrapassou o orçamento do mês em ${fmtBRL(monthOut - Number(totalBudget.amount))}.`);
   for (const b of budgets.filter(b => b.month === mk && b.category)) {
@@ -242,6 +258,63 @@ function Overview({ fins, budgets, cards, accounts, accountsTotal, futureCardExp
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
+        {jars.length > 0 && (
+          <div className="cozy-card p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 font-display text-lg"><PiggyBank className="h-4 w-4 text-primary" />Distribuição por reserva</div>
+              <span className="text-sm text-muted-foreground">{fmtBRL(totalJars)}</span>
+            </div>
+            <p className="mb-3 text-xs text-muted-foreground">As reservas separam parte do saldo das contas — não somam ao patrimônio.</p>
+            <div className="space-y-3">
+              {jars.map(j => {
+                const cur = Number(j.current_amount);
+                const acc = accounts.find(a => a.id === j.account_id);
+                return (
+                  <div key={j.id}>
+                    <div className="mb-1 flex justify-between text-sm">
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: j.color ?? "#7dd3fc" }} />
+                        {j.name}{acc && <span className="text-xs text-muted-foreground">· {acc.name}</span>}
+                      </span>
+                      <span className="text-muted-foreground">{fmtBRL(cur)}</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-accent">
+                      <div className="h-full rounded-full" style={{ width: `${Math.min(100, (cur / jarMax) * 100)}%`, background: j.color ?? "var(--primary)" }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {invs.length > 0 && (
+          <div className="cozy-card p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 font-display text-lg"><LineChart className="h-4 w-4 text-primary" />Distribuição por investimento</div>
+              <span className="text-sm text-muted-foreground">{fmtBRL(totalInvs)}</span>
+            </div>
+            <div className="space-y-3">
+              {invs.map(i => {
+                const cur = Number(i.current_amount);
+                return (
+                  <div key={i.id}>
+                    <div className="mb-1 flex justify-between text-sm">
+                      <span>{i.name} <span className="text-xs text-muted-foreground">· {i.category ?? "outros"}</span></span>
+                      <span className="text-muted-foreground">{fmtBRL(cur)}</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-accent">
+                      <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (cur / invMax) * 100)}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
         <div className="cozy-card p-5">
           <div className="mb-3 font-display text-lg">Gastos por categoria</div>
           {!catList.length ? <p className="text-sm text-muted-foreground">Sem gastos esse mês ainda.</p> :
@@ -269,7 +342,7 @@ function Overview({ fins, budgets, cards, accounts, accountsTotal, futureCardExp
 
 // ============================================================
 // ACCOUNTS
-function AccountsTab({ accounts, fins, today }: { accounts: Account[]; fins: Fin[]; today: string }) {
+function AccountsTab({ accounts, fins, jars, today }: { accounts: Account[]; fins: Fin[]; jars: Jar[]; today: string }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -343,6 +416,8 @@ function AccountsTab({ accounts, fins, today }: { accounts: Account[]; fins: Fin
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {accounts.map(ac => {
             const bal = balanceFor(ac, fins, today);
+            const reserved = jars.filter(j => j.account_id === ac.id).reduce((a, j) => a + Number(j.current_amount), 0);
+            const available = bal - reserved;
             const recent = fins
               .filter(f => f.account_id === ac.id || f.to_account_id === ac.id)
               .slice(0, 4);
@@ -364,6 +439,9 @@ function AccountsTab({ accounts, fins, today }: { accounts: Account[]; fins: Fin
                   </div>
                 </div>
                 <div className={`font-display text-2xl ${bal < 0 ? "text-rose-600" : ""}`}>{fmtBRL(bal)}</div>
+                {reserved > 0 && (
+                  <div className="mt-1 text-xs text-muted-foreground">Reservado: {fmtBRL(reserved)} · livre {fmtBRL(available)}</div>
+                )}
                 <div className="text-xs text-muted-foreground">Inicial: {fmtBRL(Number(ac.initial_balance))} · desde {formatDateBR(ac.initial_balance_date)}</div>
                 {ac.notes && <p className="mt-2 text-sm text-muted-foreground">{ac.notes}</p>}
                 {recent.length > 0 && (
@@ -764,7 +842,7 @@ function CardsTab({ cards, fins, accounts }: { cards: Card[]; fins: Fin[]; accou
 
 // ============================================================
 // JARS
-function Jars({ jars }: { jars: Jar[] }) {
+function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -773,19 +851,24 @@ function Jars({ jars }: { jars: Jar[] }) {
   const [move, setMove] = useState<{ jar: Jar; mode: "deposit" | "withdraw" | "transfer" } | null>(null);
   const [moveAmt, setMoveAmt] = useState(0);
   const [moveTo, setMoveTo] = useState("");
-  const [form, setForm] = useState({ name: "", current_amount: 0, goal: 0, color: "#7dd3fc", notes: "" });
+  const empty = { name: "", current_amount: 0, goal: 0, color: "#7dd3fc", notes: "", account_id: "" };
+  const [form, setForm] = useState(empty);
 
   useEffect(() => {
     if (!open) return;
     setForm(editing ? {
       name: editing.name, current_amount: Number(editing.current_amount), goal: Number(editing.goal ?? 0),
-      color: editing.color ?? "#7dd3fc", notes: editing.notes ?? "",
-    } : { name: "", current_amount: 0, goal: 0, color: "#7dd3fc", notes: "" });
+      color: editing.color ?? "#7dd3fc", notes: editing.notes ?? "", account_id: editing.account_id ?? "",
+    } : empty);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing]);
 
   const save = async () => {
     if (!user || !form.name) return;
-    const payload = { name: form.name, current_amount: form.current_amount, goal: form.goal || null, color: form.color, notes: form.notes || null };
+    const payload = {
+      name: form.name, current_amount: form.current_amount, goal: form.goal || null,
+      color: form.color, notes: form.notes || null, account_id: form.account_id || null,
+    };
     const { error } = editing
       ? await supabase.from("savings_jars").update(payload).eq("id", editing.id)
       : await supabase.from("savings_jars").insert({ ...payload, user_id: user.id });
@@ -809,7 +892,7 @@ function Jars({ jars }: { jars: Jar[] }) {
     } else if (move.mode === "withdraw") {
       await supabase.from("savings_jars").update({ current_amount: Math.max(0, Number(jar.current_amount) - moveAmt) }).eq("id", jar.id);
     } else {
-      if (!moveTo) return toast.error("Escolha o cofrinho de destino.");
+      if (!moveTo) return toast.error("Escolha a reserva de destino.");
       const target = jars.find(j => j.id === moveTo);
       if (!target) return;
       await supabase.from("savings_jars").update({ current_amount: Math.max(0, Number(jar.current_amount) - moveAmt) }).eq("id", jar.id);
@@ -825,18 +908,28 @@ function Jars({ jars }: { jars: Jar[] }) {
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
-        <Button onClick={() => { setEditing(null); setOpen(true); }} className="rounded-full"><Plus className="mr-1 h-4 w-4" />Novo cofrinho</Button>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">As reservas separam parte do saldo de uma conta para um objetivo. Elas não criam dinheiro novo nem somam ao patrimônio.</p>
+        <Button onClick={() => { setEditing(null); setOpen(true); }} className="shrink-0 rounded-full"><Plus className="mr-1 h-4 w-4" />Nova reserva</Button>
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle className="font-display">{editing ? "Editar cofrinho" : "Novo cofrinho"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-display">{editing ? "Editar reserva" : "Nova reserva"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Viagem, Emergência…" /></div>
+            <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Emergência, Viagem, Casa…" /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Valor atual</Label><Input type="number" step="0.01" value={form.current_amount} onChange={e => setForm({ ...form, current_amount: +e.target.value })} /></div>
+              <div><Label>Valor reservado</Label><Input type="number" step="0.01" value={form.current_amount} onChange={e => setForm({ ...form, current_amount: +e.target.value })} /></div>
               <div><Label>Meta (opcional)</Label><Input type="number" step="0.01" value={form.goal} onChange={e => setForm({ ...form, goal: +e.target.value })} /></div>
+            </div>
+            <div>
+              <Label>Conta vinculada</Label>
+              <select value={form.account_id} onChange={e => setForm({ ...form, account_id: e.target.value })}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                <option value="">Sem conta vinculada</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">A reserva apenas marca que parte do saldo desta conta está separada para um objetivo.</p>
             </div>
             <div><Label>Cor</Label><Input type="color" value={form.color} onChange={e => setForm({ ...form, color: e.target.value })} /></div>
             <div><Label>Observações</Label><Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
@@ -848,7 +941,7 @@ function Jars({ jars }: { jars: Jar[] }) {
       <Dialog open={!!move} onOpenChange={(o) => !o && setMove(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle className="font-display">
-            {move?.mode === "deposit" ? "Depositar" : move?.mode === "withdraw" ? "Retirar" : "Transferir"}
+            {move?.mode === "deposit" ? "Aumentar reserva" : move?.mode === "withdraw" ? "Reduzir reserva" : "Transferir entre reservas"}
             {" "}— {move?.jar.name}
           </DialogTitle></DialogHeader>
           <div className="space-y-3">
@@ -867,12 +960,13 @@ function Jars({ jars }: { jars: Jar[] }) {
         </DialogContent>
       </Dialog>
 
-      {!jars.length ? <EmptyState title="Sem cofrinhos" description="Crie separações para suas metas: emergência, viagem, casa…" /> : (
+      {!jars.length ? <EmptyState title="Sem reservas" description="Crie separações para suas metas: emergência, viagem, casa, presente…" /> : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {jars.map((j) => {
             const cur = Number(j.current_amount);
             const goal = Number(j.goal ?? 0);
             const pct = goal ? (cur / goal) * 100 : 0;
+            const acc = accounts.find(a => a.id === j.account_id);
             return (
               <div key={j.id} className="cozy-card p-5">
                 <div className="mb-3 flex items-start justify-between gap-2">
@@ -880,7 +974,10 @@ function Jars({ jars }: { jars: Jar[] }) {
                     <div className="grid h-10 w-10 place-items-center rounded-xl text-white" style={{ background: j.color ?? "#7dd3fc" }}><PiggyBank className="h-4 w-4" /></div>
                     <div>
                       <div className="font-display text-lg">{j.name}</div>
-                      {goal ? <div className="text-xs text-muted-foreground">Meta: {fmtBRL(goal)}</div> : null}
+                      <div className="text-xs text-muted-foreground">
+                        {acc ? `em ${acc.name}` : "sem conta vinculada"}
+                        {goal ? ` · meta ${fmtBRL(goal)}` : ""}
+                      </div>
                     </div>
                   </div>
                   <div className="flex gap-1">
@@ -892,8 +989,8 @@ function Jars({ jars }: { jars: Jar[] }) {
                 {goal ? <div className="mt-2"><Progress value={Math.min(100, pct)} /><div className="mt-1 text-right text-xs text-muted-foreground">{Math.round(pct)}%</div></div> : null}
                 {j.notes && <p className="mt-2 text-sm text-muted-foreground">{j.notes}</p>}
                 <div className="mt-3 flex gap-2">
-                  <Button size="sm" variant="secondary" className="flex-1 rounded-full" onClick={() => { setMove({ jar: j, mode: "deposit" }); setMoveAmt(0); }}>Depositar</Button>
-                  <Button size="sm" variant="secondary" className="flex-1 rounded-full" onClick={() => { setMove({ jar: j, mode: "withdraw" }); setMoveAmt(0); }}>Retirar</Button>
+                  <Button size="sm" variant="secondary" className="flex-1 rounded-full" onClick={() => { setMove({ jar: j, mode: "deposit" }); setMoveAmt(0); }}>+ Reservar</Button>
+                  <Button size="sm" variant="secondary" className="flex-1 rounded-full" onClick={() => { setMove({ jar: j, mode: "withdraw" }); setMoveAmt(0); }}>− Liberar</Button>
                   <Button size="sm" variant="ghost" className="rounded-full" onClick={() => { setMove({ jar: j, mode: "transfer" }); setMoveAmt(0); }} title="Transferir"><ArrowRightLeft className="h-4 w-4" /></Button>
                 </div>
               </div>
@@ -901,7 +998,7 @@ function Jars({ jars }: { jars: Jar[] }) {
           })}
         </div>
       )}
-      <ConfirmDialog open={!!confirmId} onOpenChange={(o) => !o && setConfirmId(null)} onConfirm={remove} title="Excluir cofrinho?" />
+      <ConfirmDialog open={!!confirmId} onOpenChange={(o) => !o && setConfirmId(null)} onConfirm={remove} title="Excluir reserva?" />
     </div>
   );
 }
@@ -914,22 +1011,33 @@ function Investments({ invs }: { invs: Inv[] }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Inv | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", category: "outros", invested_amount: 0, current_amount: 0, notes: "" });
+  const emptyInv = { name: "", category: "outros", institution: "", invested_amount: 0, current_amount: 0, invested_date: localDateKey(), notes: "" };
+  const [form, setForm] = useState(emptyInv);
 
   useEffect(() => {
     if (!open) return;
     setForm(editing ? {
       name: editing.name, category: editing.category ?? "outros",
+      institution: editing.institution ?? "",
       invested_amount: Number(editing.invested_amount), current_amount: Number(editing.current_amount),
+      invested_date: editing.invested_date ?? localDateKey(),
       notes: editing.notes ?? "",
-    } : { name: "", category: "outros", invested_amount: 0, current_amount: 0, notes: "" });
+    } : emptyInv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing]);
 
   const save = async () => {
     if (!user || !form.name) return;
+    const payload = {
+      name: form.name, category: form.category,
+      institution: form.institution || null,
+      invested_amount: form.invested_amount, current_amount: form.current_amount,
+      invested_date: form.invested_date || null,
+      notes: form.notes || null,
+    };
     const { error } = editing
-      ? await supabase.from("investments").update(form).eq("id", editing.id)
-      : await supabase.from("investments").insert({ ...form, user_id: user.id });
+      ? await supabase.from("investments").update(payload).eq("id", editing.id)
+      : await supabase.from("investments").insert({ ...payload, user_id: user.id });
     if (error) return toast.error(error.message);
     setOpen(false); setEditing(null);
     qc.invalidateQueries({ queryKey: ["investments"] });
@@ -963,16 +1071,20 @@ function Investments({ invs }: { invs: Inv[] }) {
         <DialogContent>
           <DialogHeader><DialogTitle className="font-display">{editing ? "Editar" : "Novo investimento"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
-            <div><Label>Categoria</Label>
-              <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                {INV_CATS.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+            <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Tesouro Selic 2029…" /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Instituição</Label><Input value={form.institution} onChange={e => setForm({ ...form, institution: e.target.value })} placeholder="Nubank, XP, Inter…" /></div>
+              <div><Label>Tipo</Label>
+                <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  {INV_CATS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Valor investido</Label><Input type="number" step="0.01" value={form.invested_amount} onChange={e => setForm({ ...form, invested_amount: +e.target.value })} /></div>
+              <div><Label>Valor aplicado</Label><Input type="number" step="0.01" value={form.invested_amount} onChange={e => setForm({ ...form, invested_amount: +e.target.value })} /></div>
               <div><Label>Valor atual</Label><Input type="number" step="0.01" value={form.current_amount} onChange={e => setForm({ ...form, current_amount: +e.target.value })} /></div>
             </div>
+            <div><Label>Data da aplicação</Label><Input type="date" value={form.invested_date} onChange={e => setForm({ ...form, invested_date: e.target.value })} /></div>
             <div><Label>Observações</Label><Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
             <Button onClick={save} className="w-full rounded-full">{editing ? "Salvar" : "Adicionar"}</Button>
           </div>
@@ -989,7 +1101,12 @@ function Investments({ invs }: { invs: Inv[] }) {
                 <div className="grid h-10 w-10 place-items-center rounded-xl bg-sand/60"><LineChart className="h-4 w-4" /></div>
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">{i.name}</div>
-                  <div className="text-xs text-muted-foreground">{i.category} · investido {fmtBRL(Number(i.invested_amount))}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {i.category}
+                    {i.institution ? ` · ${i.institution}` : ""}
+                    {` · investido ${fmtBRL(Number(i.invested_amount))}`}
+                    {i.invested_date ? ` · desde ${formatDateBR(i.invested_date)}` : ""}
+                  </div>
                 </div>
                 <div className="text-right">
                   <div className="font-display text-lg">{fmtBRL(Number(i.current_amount))}</div>
