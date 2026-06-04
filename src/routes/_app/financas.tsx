@@ -416,6 +416,8 @@ function AccountsTab({ accounts, fins, jars, today }: { accounts: Account[]; fin
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {accounts.map(ac => {
             const bal = balanceFor(ac, fins, today);
+            const reserved = jars.filter(j => j.account_id === ac.id).reduce((a, j) => a + Number(j.current_amount), 0);
+            const available = bal - reserved;
             const recent = fins
               .filter(f => f.account_id === ac.id || f.to_account_id === ac.id)
               .slice(0, 4);
