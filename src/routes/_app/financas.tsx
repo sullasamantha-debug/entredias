@@ -1006,22 +1006,33 @@ function Investments({ invs }: { invs: Inv[] }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Inv | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", category: "outros", invested_amount: 0, current_amount: 0, notes: "" });
+  const emptyInv = { name: "", category: "outros", institution: "", invested_amount: 0, current_amount: 0, invested_date: localDateKey(), notes: "" };
+  const [form, setForm] = useState(emptyInv);
 
   useEffect(() => {
     if (!open) return;
     setForm(editing ? {
       name: editing.name, category: editing.category ?? "outros",
+      institution: editing.institution ?? "",
       invested_amount: Number(editing.invested_amount), current_amount: Number(editing.current_amount),
+      invested_date: editing.invested_date ?? localDateKey(),
       notes: editing.notes ?? "",
-    } : { name: "", category: "outros", invested_amount: 0, current_amount: 0, notes: "" });
+    } : emptyInv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing]);
 
   const save = async () => {
     if (!user || !form.name) return;
+    const payload = {
+      name: form.name, category: form.category,
+      institution: form.institution || null,
+      invested_amount: form.invested_amount, current_amount: form.current_amount,
+      invested_date: form.invested_date || null,
+      notes: form.notes || null,
+    };
     const { error } = editing
-      ? await supabase.from("investments").update(form).eq("id", editing.id)
-      : await supabase.from("investments").insert({ ...form, user_id: user.id });
+      ? await supabase.from("investments").update(payload).eq("id", editing.id)
+      : await supabase.from("investments").insert({ ...payload, user_id: user.id });
     if (error) return toast.error(error.message);
     setOpen(false); setEditing(null);
     qc.invalidateQueries({ queryKey: ["investments"] });
@@ -1055,16 +1066,20 @@ function Investments({ invs }: { invs: Inv[] }) {
         <DialogContent>
           <DialogHeader><DialogTitle className="font-display">{editing ? "Editar" : "Novo investimento"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
-            <div><Label>Categoria</Label>
-              <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                {INV_CATS.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+            <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Tesouro Selic 2029…" /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Instituição</Label><Input value={form.institution} onChange={e => setForm({ ...form, institution: e.target.value })} placeholder="Nubank, XP, Inter…" /></div>
+              <div><Label>Tipo</Label>
+                <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  {INV_CATS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Valor investido</Label><Input type="number" step="0.01" value={form.invested_amount} onChange={e => setForm({ ...form, invested_amount: +e.target.value })} /></div>
+              <div><Label>Valor aplicado</Label><Input type="number" step="0.01" value={form.invested_amount} onChange={e => setForm({ ...form, invested_amount: +e.target.value })} /></div>
               <div><Label>Valor atual</Label><Input type="number" step="0.01" value={form.current_amount} onChange={e => setForm({ ...form, current_amount: +e.target.value })} /></div>
             </div>
+            <div><Label>Data da aplicação</Label><Input type="date" value={form.invested_date} onChange={e => setForm({ ...form, invested_date: e.target.value })} /></div>
             <div><Label>Observações</Label><Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
             <Button onClick={save} className="w-full rounded-full">{editing ? "Salvar" : "Adicionar"}</Button>
           </div>
@@ -1081,7 +1096,12 @@ function Investments({ invs }: { invs: Inv[] }) {
                 <div className="grid h-10 w-10 place-items-center rounded-xl bg-sand/60"><LineChart className="h-4 w-4" /></div>
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">{i.name}</div>
-                  <div className="text-xs text-muted-foreground">{i.category} · investido {fmtBRL(Number(i.invested_amount))}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {i.category}
+                    {i.institution ? ` · ${i.institution}` : ""}
+                    {` · investido ${fmtBRL(Number(i.invested_amount))}`}
+                    {i.invested_date ? ` · desde ${formatDateBR(i.invested_date)}` : ""}
+                  </div>
                 </div>
                 <div className="text-right">
                   <div className="font-display text-lg">{fmtBRL(Number(i.current_amount))}</div>
