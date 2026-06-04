@@ -342,7 +342,7 @@ function Overview({ fins, budgets, cards, accounts, jars, invs, accountsTotal, t
 
 // ============================================================
 // ACCOUNTS
-function AccountsTab({ accounts, fins, today }: { accounts: Account[]; fins: Fin[]; today: string }) {
+function AccountsTab({ accounts, fins, jars, today }: { accounts: Account[]; fins: Fin[]; jars: Jar[]; today: string }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
