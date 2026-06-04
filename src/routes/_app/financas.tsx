@@ -122,7 +122,8 @@ function FinancasPage() {
   const futureCardExpense = finList.filter(f => f.kind === "expense" && !f.paid && f.card_id).reduce((a, f) => a + Number(f.amount), 0);
   const totalJars = (jars ?? []).reduce((a, j) => a + Number(j.current_amount), 0);
   const totalInvs = (invs ?? []).reduce((a, i) => a + Number(i.current_amount), 0);
-  const patrimony = accountsTotal + totalJars + totalInvs;
+  // Reservas NÃO entram no patrimônio — já fazem parte das contas (são apenas uma marcação).
+  const patrimony = accountsTotal + totalInvs;
 
   return (
     <div>
@@ -131,10 +132,11 @@ function FinancasPage() {
       <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Saldo em contas" value={fmtBRL(accountsTotal)} icon={Wallet} tint="primary"
           hint={accountList.length ? `${accountList.length} conta${accountList.length > 1 ? "s" : ""}` : undefined} />
-        <StatCard label="Cofrinhos" value={fmtBRL(totalJars)} icon={PiggyBank} tint="mint" />
-        <StatCard label="Investimentos" value={fmtBRL(totalInvs)} icon={LineChart} tint="sand" />
+        <StatCard label="Reservado" value={fmtBRL(totalJars)} icon={PiggyBank} tint="mint"
+          hint="parte do saldo das contas" />
+        <StatCard label="Investido" value={fmtBRL(totalInvs)} icon={LineChart} tint="sand" />
         <StatCard label="Patrimônio total" value={fmtBRL(patrimony)} icon={Sparkles} tint="blush"
-          hint={futureCardExpense > 0 ? `−${fmtBRL(futureCardExpense)} em faturas` : undefined} />
+          hint={futureCardExpense > 0 ? `−${fmtBRL(futureCardExpense)} em faturas` : "contas + investimentos"} />
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
@@ -145,7 +147,7 @@ function FinancasPage() {
               ["accounts", "Contas"],
               ["tx", "Transações"],
               ["cards", "Cartões"],
-              ["jars", "Cofrinhos"],
+              ["jars", "Reservas"],
               ["invs", "Investimentos"],
               ["budget", "Orçamento"],
               ["config", "Configurações"],
@@ -155,11 +157,11 @@ function FinancasPage() {
           </TabsList>
         </div>
 
-        <TabsContent value="overview"><Overview fins={finList} budgets={budgets ?? []} cards={cards ?? []} accounts={accountList} accountsTotal={accountsTotal} futureCardExpense={futureCardExpense} patrimony={patrimony} today={today} /></TabsContent>
-        <TabsContent value="accounts"><AccountsTab accounts={accountList} fins={finList} today={today} /></TabsContent>
+        <TabsContent value="overview"><Overview fins={finList} budgets={budgets ?? []} cards={cards ?? []} accounts={accountList} jars={jars ?? []} invs={invs ?? []} accountsTotal={accountsTotal} totalJars={totalJars} totalInvs={totalInvs} futureCardExpense={futureCardExpense} patrimony={patrimony} today={today} /></TabsContent>
+        <TabsContent value="accounts"><AccountsTab accounts={accountList} fins={finList} jars={jars ?? []} today={today} /></TabsContent>
         <TabsContent value="tx"><Transactions fins={finList} cards={cards ?? []} accounts={accountList} /></TabsContent>
         <TabsContent value="cards"><CardsTab cards={cards ?? []} fins={finList} accounts={accountList} /></TabsContent>
-        <TabsContent value="jars"><Jars jars={jars ?? []} /></TabsContent>
+        <TabsContent value="jars"><Jars jars={jars ?? []} accounts={accountList} /></TabsContent>
         <TabsContent value="invs"><Investments invs={invs ?? []} /></TabsContent>
         <TabsContent value="budget"><BudgetTab budgets={budgets ?? []} fins={finList} /></TabsContent>
         <TabsContent value="config"><Config settings={settings ?? null} hasAccounts={accountList.length > 0} /></TabsContent>
