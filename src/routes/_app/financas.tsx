@@ -172,8 +172,8 @@ function FinancasPage() {
 
 // ============================================================
 // OVERVIEW
-function Overview({ fins, budgets, cards, accounts, accountsTotal, futureCardExpense, patrimony, today }:
-  { fins: Fin[]; budgets: Budget[]; cards: Card[]; accounts: Account[]; accountsTotal: number; futureCardExpense: number; patrimony: number; today: string }) {
+function Overview({ fins, budgets, cards, accounts, jars, invs, accountsTotal, totalJars, totalInvs, futureCardExpense, patrimony, today }:
+  { fins: Fin[]; budgets: Budget[]; cards: Card[]; accounts: Account[]; jars: Jar[]; invs: Inv[]; accountsTotal: number; totalJars: number; totalInvs: number; futureCardExpense: number; patrimony: number; today: string }) {
   const mk = monthKey();
   const monthStart = `${mk}-01`;
   const next = addMonth(mk, 1);
@@ -193,7 +193,21 @@ function Overview({ fins, budgets, cards, accounts, accountsTotal, futureCardExp
   const accMax = Math.max(1, ...accBalances.map(a => Math.abs(a.bal)));
   const biggest = accBalances.slice().sort((a, b) => b.bal - a.bal)[0];
 
+  const jarMax = Math.max(1, ...jars.map(j => Number(j.current_amount)));
+  const invMax = Math.max(1, ...invs.map(i => Number(i.current_amount)));
+  const biggestInv = invs.slice().sort((a, b) => Number(b.current_amount) - Number(a.current_amount))[0];
+
   const insights: string[] = [];
+  if (patrimony > 0 && totalInvs > 0) insights.push(`${Math.round((totalInvs / patrimony) * 100)}% do seu patrimônio está investido.`);
+  for (const j of jars) {
+    const goal = Number(j.goal ?? 0);
+    if (goal > 0) {
+      const pct = Math.round((Number(j.current_amount) / goal) * 100);
+      if (pct >= 100) insights.push(`Sua reserva "${j.name}" já atingiu a meta.`);
+      else if (pct >= 50) insights.push(`Sua reserva "${j.name}" já atingiu ${pct}% da meta.`);
+    }
+  }
+  if (biggestInv) insights.push(`O ${biggestInv.name} representa seu maior investimento (${fmtBRL(Number(biggestInv.current_amount))}).`);
   const totalBudget = budgets.find(b => b.month === mk && !b.category);
   if (totalBudget && monthOut > Number(totalBudget.amount)) insights.push(`Você ultrapassou o orçamento do mês em ${fmtBRL(monthOut - Number(totalBudget.amount))}.`);
   for (const b of budgets.filter(b => b.month === mk && b.category)) {
@@ -242,6 +256,63 @@ function Overview({ fins, budgets, cards, accounts, accountsTotal, futureCardExp
           </div>
         </div>
       )}
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {jars.length > 0 && (
+          <div className="cozy-card p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 font-display text-lg"><PiggyBank className="h-4 w-4 text-primary" />Distribuição por reserva</div>
+              <span className="text-sm text-muted-foreground">{fmtBRL(totalJars)}</span>
+            </div>
+            <p className="mb-3 text-xs text-muted-foreground">As reservas separam parte do saldo das contas — não somam ao patrimônio.</p>
+            <div className="space-y-3">
+              {jars.map(j => {
+                const cur = Number(j.current_amount);
+                const acc = accounts.find(a => a.id === j.account_id);
+                return (
+                  <div key={j.id}>
+                    <div className="mb-1 flex justify-between text-sm">
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: j.color ?? "#7dd3fc" }} />
+                        {j.name}{acc && <span className="text-xs text-muted-foreground">· {acc.name}</span>}
+                      </span>
+                      <span className="text-muted-foreground">{fmtBRL(cur)}</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-accent">
+                      <div className="h-full rounded-full" style={{ width: `${Math.min(100, (cur / jarMax) * 100)}%`, background: j.color ?? "var(--primary)" }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {invs.length > 0 && (
+          <div className="cozy-card p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 font-display text-lg"><LineChart className="h-4 w-4 text-primary" />Distribuição por investimento</div>
+              <span className="text-sm text-muted-foreground">{fmtBRL(totalInvs)}</span>
+            </div>
+            <div className="space-y-3">
+              {invs.map(i => {
+                const cur = Number(i.current_amount);
+                return (
+                  <div key={i.id}>
+                    <div className="mb-1 flex justify-between text-sm">
+                      <span>{i.name} <span className="text-xs text-muted-foreground">· {i.category ?? "outros"}</span></span>
+                      <span className="text-muted-foreground">{fmtBRL(cur)}</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-accent">
+                      <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (cur / invMax) * 100)}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="cozy-card p-5">
