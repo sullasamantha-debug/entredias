@@ -837,7 +837,7 @@ function CardsTab({ cards, fins, accounts }: { cards: Card[]; fins: Fin[]; accou
 
 // ============================================================
 // JARS
-function Jars({ jars }: { jars: Jar[] }) {
+function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -846,19 +846,24 @@ function Jars({ jars }: { jars: Jar[] }) {
   const [move, setMove] = useState<{ jar: Jar; mode: "deposit" | "withdraw" | "transfer" } | null>(null);
   const [moveAmt, setMoveAmt] = useState(0);
   const [moveTo, setMoveTo] = useState("");
-  const [form, setForm] = useState({ name: "", current_amount: 0, goal: 0, color: "#7dd3fc", notes: "" });
+  const empty = { name: "", current_amount: 0, goal: 0, color: "#7dd3fc", notes: "", account_id: "" };
+  const [form, setForm] = useState(empty);
 
   useEffect(() => {
     if (!open) return;
     setForm(editing ? {
       name: editing.name, current_amount: Number(editing.current_amount), goal: Number(editing.goal ?? 0),
-      color: editing.color ?? "#7dd3fc", notes: editing.notes ?? "",
-    } : { name: "", current_amount: 0, goal: 0, color: "#7dd3fc", notes: "" });
+      color: editing.color ?? "#7dd3fc", notes: editing.notes ?? "", account_id: editing.account_id ?? "",
+    } : empty);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing]);
 
   const save = async () => {
     if (!user || !form.name) return;
-    const payload = { name: form.name, current_amount: form.current_amount, goal: form.goal || null, color: form.color, notes: form.notes || null };
+    const payload = {
+      name: form.name, current_amount: form.current_amount, goal: form.goal || null,
+      color: form.color, notes: form.notes || null, account_id: form.account_id || null,
+    };
     const { error } = editing
       ? await supabase.from("savings_jars").update(payload).eq("id", editing.id)
       : await supabase.from("savings_jars").insert({ ...payload, user_id: user.id });
@@ -882,7 +887,7 @@ function Jars({ jars }: { jars: Jar[] }) {
     } else if (move.mode === "withdraw") {
       await supabase.from("savings_jars").update({ current_amount: Math.max(0, Number(jar.current_amount) - moveAmt) }).eq("id", jar.id);
     } else {
-      if (!moveTo) return toast.error("Escolha o cofrinho de destino.");
+      if (!moveTo) return toast.error("Escolha a reserva de destino.");
       const target = jars.find(j => j.id === moveTo);
       if (!target) return;
       await supabase.from("savings_jars").update({ current_amount: Math.max(0, Number(jar.current_amount) - moveAmt) }).eq("id", jar.id);
@@ -898,18 +903,28 @@ function Jars({ jars }: { jars: Jar[] }) {
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
-        <Button onClick={() => { setEditing(null); setOpen(true); }} className="rounded-full"><Plus className="mr-1 h-4 w-4" />Novo cofrinho</Button>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">As reservas separam parte do saldo de uma conta para um objetivo. Elas não criam dinheiro novo nem somam ao patrimônio.</p>
+        <Button onClick={() => { setEditing(null); setOpen(true); }} className="shrink-0 rounded-full"><Plus className="mr-1 h-4 w-4" />Nova reserva</Button>
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle className="font-display">{editing ? "Editar cofrinho" : "Novo cofrinho"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-display">{editing ? "Editar reserva" : "Nova reserva"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Viagem, Emergência…" /></div>
+            <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Emergência, Viagem, Casa…" /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Valor atual</Label><Input type="number" step="0.01" value={form.current_amount} onChange={e => setForm({ ...form, current_amount: +e.target.value })} /></div>
+              <div><Label>Valor reservado</Label><Input type="number" step="0.01" value={form.current_amount} onChange={e => setForm({ ...form, current_amount: +e.target.value })} /></div>
               <div><Label>Meta (opcional)</Label><Input type="number" step="0.01" value={form.goal} onChange={e => setForm({ ...form, goal: +e.target.value })} /></div>
+            </div>
+            <div>
+              <Label>Conta vinculada</Label>
+              <select value={form.account_id} onChange={e => setForm({ ...form, account_id: e.target.value })}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                <option value="">Sem conta vinculada</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">A reserva apenas marca que parte do saldo desta conta está separada para um objetivo.</p>
             </div>
             <div><Label>Cor</Label><Input type="color" value={form.color} onChange={e => setForm({ ...form, color: e.target.value })} /></div>
             <div><Label>Observações</Label><Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
@@ -921,7 +936,7 @@ function Jars({ jars }: { jars: Jar[] }) {
       <Dialog open={!!move} onOpenChange={(o) => !o && setMove(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle className="font-display">
-            {move?.mode === "deposit" ? "Depositar" : move?.mode === "withdraw" ? "Retirar" : "Transferir"}
+            {move?.mode === "deposit" ? "Aumentar reserva" : move?.mode === "withdraw" ? "Reduzir reserva" : "Transferir entre reservas"}
             {" "}— {move?.jar.name}
           </DialogTitle></DialogHeader>
           <div className="space-y-3">
@@ -940,12 +955,13 @@ function Jars({ jars }: { jars: Jar[] }) {
         </DialogContent>
       </Dialog>
 
-      {!jars.length ? <EmptyState title="Sem cofrinhos" description="Crie separações para suas metas: emergência, viagem, casa…" /> : (
+      {!jars.length ? <EmptyState title="Sem reservas" description="Crie separações para suas metas: emergência, viagem, casa, presente…" /> : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {jars.map((j) => {
             const cur = Number(j.current_amount);
             const goal = Number(j.goal ?? 0);
             const pct = goal ? (cur / goal) * 100 : 0;
+            const acc = accounts.find(a => a.id === j.account_id);
             return (
               <div key={j.id} className="cozy-card p-5">
                 <div className="mb-3 flex items-start justify-between gap-2">
@@ -953,7 +969,10 @@ function Jars({ jars }: { jars: Jar[] }) {
                     <div className="grid h-10 w-10 place-items-center rounded-xl text-white" style={{ background: j.color ?? "#7dd3fc" }}><PiggyBank className="h-4 w-4" /></div>
                     <div>
                       <div className="font-display text-lg">{j.name}</div>
-                      {goal ? <div className="text-xs text-muted-foreground">Meta: {fmtBRL(goal)}</div> : null}
+                      <div className="text-xs text-muted-foreground">
+                        {acc ? `em ${acc.name}` : "sem conta vinculada"}
+                        {goal ? ` · meta ${fmtBRL(goal)}` : ""}
+                      </div>
                     </div>
                   </div>
                   <div className="flex gap-1">
@@ -965,8 +984,8 @@ function Jars({ jars }: { jars: Jar[] }) {
                 {goal ? <div className="mt-2"><Progress value={Math.min(100, pct)} /><div className="mt-1 text-right text-xs text-muted-foreground">{Math.round(pct)}%</div></div> : null}
                 {j.notes && <p className="mt-2 text-sm text-muted-foreground">{j.notes}</p>}
                 <div className="mt-3 flex gap-2">
-                  <Button size="sm" variant="secondary" className="flex-1 rounded-full" onClick={() => { setMove({ jar: j, mode: "deposit" }); setMoveAmt(0); }}>Depositar</Button>
-                  <Button size="sm" variant="secondary" className="flex-1 rounded-full" onClick={() => { setMove({ jar: j, mode: "withdraw" }); setMoveAmt(0); }}>Retirar</Button>
+                  <Button size="sm" variant="secondary" className="flex-1 rounded-full" onClick={() => { setMove({ jar: j, mode: "deposit" }); setMoveAmt(0); }}>+ Reservar</Button>
+                  <Button size="sm" variant="secondary" className="flex-1 rounded-full" onClick={() => { setMove({ jar: j, mode: "withdraw" }); setMoveAmt(0); }}>− Liberar</Button>
                   <Button size="sm" variant="ghost" className="rounded-full" onClick={() => { setMove({ jar: j, mode: "transfer" }); setMoveAmt(0); }} title="Transferir"><ArrowRightLeft className="h-4 w-4" /></Button>
                 </div>
               </div>
@@ -974,7 +993,7 @@ function Jars({ jars }: { jars: Jar[] }) {
           })}
         </div>
       )}
-      <ConfirmDialog open={!!confirmId} onOpenChange={(o) => !o && setConfirmId(null)} onConfirm={remove} title="Excluir cofrinho?" />
+      <ConfirmDialog open={!!confirmId} onOpenChange={(o) => !o && setConfirmId(null)} onConfirm={remove} title="Excluir reserva?" />
     </div>
   );
 }
