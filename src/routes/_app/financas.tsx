@@ -40,7 +40,16 @@ type Account = {
 type Jar = { id: string; name: string; current_amount: number; goal: number | null; color: string | null; icon: string | null; notes: string | null; account_id: string | null };
 type Inv = { id: string; name: string; category: string | null; invested_amount: number; current_amount: number; notes: string | null; institution: string | null; invested_date: string | null };
 type Card = { id: string; name: string; card_limit: number; closing_day: number; due_day: number; color: string | null };
-type Budget = { id: string; month: string; category: string | null; amount: number };
+type Budget = {
+  id: string; month: string; category: string | null; amount: number;
+  kind: string; ref_id: string | null; realized_amount: number | null; label: string | null;
+};
+type PlannedIncome = {
+  id: string; month: string; description: string; category: string | null; amount: number;
+  expected_date: string | null; account_id: string | null; received: boolean; notes: string | null;
+};
+type Movement = { id: string; jar_id: string; kind: string; amount: number; date: string };
+
 
 const PAY = ["pix", "débito", "dinheiro", "crédito"];
 const INV_CATS = ["tesouro", "cdb", "poupança", "ações", "fundos", "cripto", "outros"];
