@@ -113,6 +113,15 @@ function FinancasPage() {
     enabled: !!user, queryKey: ["budgets", user?.id],
     queryFn: async () => ((await supabase.from("budgets").select("*")).data ?? []) as Budget[],
   });
+  const { data: plannedIncomes } = useQuery({
+    enabled: !!user, queryKey: ["planned_incomes", user?.id],
+    queryFn: async () => ((await supabase.from("planned_incomes").select("*").order("expected_date", { nullsFirst: false })).data ?? []) as PlannedIncome[],
+  });
+  const { data: movements } = useQuery({
+    enabled: !!user, queryKey: ["savings_movements", user?.id],
+    queryFn: async () => ((await supabase.from("savings_movements").select("*")).data ?? []) as Movement[],
+  });
+
 
   // -------- derived totals --------
   const today = localDateKey();
