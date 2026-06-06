@@ -1143,118 +1143,419 @@ function Investments({ invs }: { invs: Inv[] }) {
 }
 
 // ============================================================
-// BUDGET
-function BudgetTab({ budgets, fins }: { budgets: Budget[]; fins: Fin[] }) {
+// PLANNING (receitas previstas + orçamento + planejado x realizado)
+type BudgetKind = "category" | "card" | "reserve" | "investment";
+
+function PlanningTab({
+  budgets, fins, accounts, jars, invs, cards, plannedIncomes, movements,
+}: {
+  budgets: Budget[]; fins: Fin[]; accounts: Account[]; jars: Jar[]; invs: Inv[]; cards: Card[];
+  plannedIncomes: PlannedIncome[]; movements: Movement[];
+}) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [month, setMonth] = useState(monthKey());
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<{ category: string; amount: number }>({ category: "", amount: 0 });
-
-  const monthBudgets = budgets.filter(b => b.month === month);
-  const total = monthBudgets.find(b => !b.category);
-  const cats = monthBudgets.filter(b => b.category);
-
   const start = `${month}-01`;
   const end = `${addMonth(month, 1)}-01`;
-  const monthFins = fins.filter(f => f.kind === "expense" && f.date >= start && f.date < end);
-  const spentTotal = monthFins.reduce((a, f) => a + Number(f.amount), 0);
-  const spentByCat = monthFins.reduce<Record<string, number>>((acc, f) => {
-    const k = f.category || "—"; acc[k] = (acc[k] ?? 0) + Number(f.amount); return acc;
-  }, {});
 
-  const upsertBudget = async (category: string | null, amount: number) => {
+  // ---------- planned incomes ----------
+  const monthIncomes = plannedIncomes.filter(p => p.month === month);
+  const totalIncomePlanned = monthIncomes.reduce((a, p) => a + Number(p.amount), 0);
+  const totalIncomeReceived = monthIncomes.filter(p => p.received).reduce((a, p) => a + Number(p.amount), 0);
+  const realIncomeMonth = fins.filter(f => f.kind === "income" && f.date >= start && f.date < end).reduce((a, f) => a + Number(f.amount), 0);
+
+  const [incOpen, setIncOpen] = useState(false);
+  const [incEditing, setIncEditing] = useState<PlannedIncome | null>(null);
+  const incEmpty = { description: "", category: "salário", amount: 0, expected_date: `${month}-05`, account_id: accounts[0]?.id ?? null, received: false, notes: "" };
+  const [incForm, setIncForm] = useState<any>(incEmpty);
+
+  useEffect(() => {
+    if (!incOpen) return;
+    setIncForm(incEditing ? {
+      description: incEditing.description, category: incEditing.category ?? "",
+      amount: Number(incEditing.amount), expected_date: incEditing.expected_date ?? `${month}-05`,
+      account_id: incEditing.account_id, received: incEditing.received, notes: incEditing.notes ?? "",
+    } : { ...incEmpty, expected_date: `${month}-05` });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incOpen, incEditing, month]);
+
+  const saveIncome = async () => {
+    if (!user || !incForm.description) return;
+    const payload = { ...incForm, month, user_id: user.id };
+    const { error } = incEditing
+      ? await supabase.from("planned_incomes").update(payload).eq("id", incEditing.id)
+      : await supabase.from("planned_incomes").insert(payload);
+    if (error) return toast.error(error.message);
+    setIncOpen(false); setIncEditing(null);
+    qc.invalidateQueries({ queryKey: ["planned_incomes"] });
+  };
+  const toggleReceived = async (p: PlannedIncome) => {
+    await supabase.from("planned_incomes").update({ received: !p.received }).eq("id", p.id);
+    qc.invalidateQueries({ queryKey: ["planned_incomes"] });
+  };
+  const removeIncome = async (id: string) => {
+    await supabase.from("planned_incomes").delete().eq("id", id);
+    qc.invalidateQueries({ queryKey: ["planned_incomes"] });
+  };
+
+  // ---------- budgets ----------
+  const monthBudgets = budgets.filter(b => b.month === month);
+  const totalRow = monthBudgets.find(b => b.kind === "category" && !b.category && !b.ref_id);
+  const catBudgets = monthBudgets.filter(b => b.kind === "category" && b.category);
+  const cardBudgets = monthBudgets.filter(b => b.kind === "card");
+  const reserveBudgets = monthBudgets.filter(b => b.kind === "reserve");
+  const investBudgets = monthBudgets.filter(b => b.kind === "investment");
+
+  const monthExpenses = fins.filter(f => f.kind === "expense" && f.date >= start && f.date < end);
+  const spentTotal = monthExpenses.reduce((a, f) => a + Number(f.amount), 0);
+  const spentByCat = monthExpenses.reduce<Record<string, number>>((acc, f) => {
+    const k = (f.category || "—").toLowerCase(); acc[k] = (acc[k] ?? 0) + Number(f.amount); return acc;
+  }, {});
+  const spentByCard = fins.filter(f => f.kind === "expense" && f.card_id && (f.invoice_month === month || (!f.invoice_month && f.date >= start && f.date < end)))
+    .reduce<Record<string, number>>((acc, f) => { acc[f.card_id!] = (acc[f.card_id!] ?? 0) + Number(f.amount); return acc; }, {});
+  const depositByJar = movements.filter(m => m.kind === "deposit" && m.date >= start && m.date < end)
+    .reduce<Record<string, number>>((acc, m) => { acc[m.jar_id] = (acc[m.jar_id] ?? 0) + Number(m.amount); return acc; }, {});
+
+  const realizedFor = (b: Budget): number => {
+    if (b.kind === "category") return spentByCat[(b.category ?? "").toLowerCase()] ?? 0;
+    if (b.kind === "card" && b.ref_id) return spentByCard[b.ref_id] ?? 0;
+    if (b.kind === "reserve" && b.ref_id) return depositByJar[b.ref_id] ?? 0;
+    if (b.kind === "investment") return Number(b.realized_amount ?? 0);
+    return 0;
+  };
+
+  // ---------- mutations: budgets ----------
+  const upsertBudget = async (payload: Partial<Budget> & { kind: BudgetKind; amount: number; category?: string | null; ref_id?: string | null; label?: string | null }) => {
     if (!user) return;
-    const existing = budgets.find(b => b.month === month && (b.category ?? null) === category);
-    const payload = { user_id: user.id, month, category, amount };
+    const existing = budgets.find(b => b.month === month && b.kind === payload.kind
+      && (b.category ?? null) === (payload.category ?? null) && (b.ref_id ?? null) === (payload.ref_id ?? null));
+    const body: any = { user_id: user.id, month, ...payload };
     const { error } = existing
-      ? await supabase.from("budgets").update({ amount }).eq("id", existing.id)
-      : await supabase.from("budgets").insert(payload);
+      ? await supabase.from("budgets").update(body).eq("id", existing.id)
+      : await supabase.from("budgets").insert(body);
     if (error) return toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["budgets"] });
   };
-
-  const addCat = async () => {
-    if (!form.category) return;
-    await upsertBudget(form.category, form.amount);
-    setOpen(false); setForm({ category: "", amount: 0 });
+  const updateBudget = async (id: string, patch: any) => {
+    await supabase.from("budgets").update(patch).eq("id", id);
+    qc.invalidateQueries({ queryKey: ["budgets"] });
   };
-
   const removeBudget = async (id: string) => {
     await supabase.from("budgets").delete().eq("id", id);
     qc.invalidateQueries({ queryKey: ["budgets"] });
   };
 
+  // ---------- add budget dialog ----------
+  const [bOpen, setBOpen] = useState(false);
+  const [bForm, setBForm] = useState<{ kind: BudgetKind; category: string; ref_id: string; amount: number; label: string }>({ kind: "category", category: "", ref_id: "", amount: 0, label: "" });
+  useEffect(() => { if (bOpen) setBForm({ kind: "category", category: "", ref_id: "", amount: 0, label: "" }); }, [bOpen]);
+
+  const saveNewBudget = async () => {
+    if (bForm.amount <= 0) return toast.error("Informe um valor.");
+    if (bForm.kind === "category" && !bForm.category) return toast.error("Informe a categoria.");
+    if ((bForm.kind === "card" || bForm.kind === "reserve" || bForm.kind === "investment") && !bForm.ref_id) return toast.error("Selecione um item.");
+    await upsertBudget({
+      kind: bForm.kind,
+      amount: bForm.amount,
+      category: bForm.kind === "category" ? bForm.category.toLowerCase() : null,
+      ref_id: bForm.kind === "category" ? null : bForm.ref_id,
+      label: bForm.label || null,
+    });
+    setBOpen(false);
+  };
+
+  // ---------- aggregates ----------
+  const sum = (arr: Budget[]) => arr.reduce((a, b) => a + Number(b.amount), 0);
+  const sumReal = (arr: Budget[]) => arr.reduce((a, b) => a + realizedFor(b), 0);
+  const plannedCats = sum(catBudgets);
+  const plannedCards = sum(cardBudgets);
+  const plannedReserves = sum(reserveBudgets);
+  const plannedInvs = sum(investBudgets);
+  const totalPlanned = plannedCats + plannedCards + plannedReserves + plannedInvs;
+  const freeBalance = totalIncomePlanned - totalPlanned;
+  const realized = sumReal(catBudgets) + sumReal(cardBudgets) + sumReal(reserveBudgets) + sumReal(investBudgets);
+  const usedPct = totalIncomePlanned > 0 ? Math.round((totalPlanned / totalIncomePlanned) * 100) : 0;
+  const economy = realIncomeMonth - spentTotal;
+
+  // ---------- alerts / insights ----------
+  const alerts: { tone: "warn" | "good" | "info"; text: string }[] = [];
+  if (totalIncomePlanned > 0 && totalPlanned > totalIncomePlanned) alerts.push({ tone: "warn", text: `Seu planejamento (${fmtBRL(totalPlanned)}) ultrapassa a renda prevista (${fmtBRL(totalIncomePlanned)}).` });
+  if (totalIncomePlanned > 0 && usedPct <= 90 && totalPlanned > 0) alerts.push({ tone: "info", text: `Seu planejamento utiliza ${usedPct}% da renda prevista.` });
+  if (realIncomeMonth > 0 && plannedInvs > 0) {
+    const pctInv = Math.round((sumReal(investBudgets) / realIncomeMonth) * 100);
+    if (pctInv > 0) alerts.push({ tone: "good", text: `Você investiu ${pctInv}% da sua renda este mês.` });
+  }
+  for (const b of [...catBudgets, ...cardBudgets, ...reserveBudgets, ...investBudgets]) {
+    const r = realizedFor(b); const amt = Number(b.amount);
+    if (amt <= 0) continue;
+    const pct = (r / amt) * 100;
+    const name = b.label || b.category || (b.kind === "card" ? cards.find(c => c.id === b.ref_id)?.name : b.kind === "reserve" ? jars.find(j => j.id === b.ref_id)?.name : invs.find(i => i.id === b.ref_id)?.name) || "—";
+    if (pct >= 100 && r > amt) alerts.push({ tone: "warn", text: `Você gastou ${fmtBRL(r - amt)} acima do planejado em ${name}.` });
+    else if (pct >= 80 && pct < 100) alerts.push({ tone: "info", text: `${name} já consumiu ${Math.round(pct)}% do planejado.` });
+    else if (b.kind === "category" && pct < 100 && r > 0 && r < amt && spentTotal > 0) {
+      // economy on a category
+      // limited noise: only show when at least 20% economized
+      if ((amt - r) / amt >= 0.2) alerts.push({ tone: "good", text: `Você economizou ${fmtBRL(amt - r)} em ${name}.` });
+    }
+    if (b.kind === "reserve" && r >= amt && amt > 0) alerts.push({ tone: "good", text: `Sua reserva ${name} recebeu o valor planejado.` });
+  }
+
   const colorFor = (pct: number) => pct >= 100 ? "bg-rose-500" : pct >= 80 ? "bg-amber-500" : "bg-emerald-500";
 
+  const renderBudgetRow = (b: Budget) => {
+    const r = realizedFor(b); const amt = Number(b.amount); const pct = amt ? (r / amt) * 100 : 0;
+    const diff = amt - r;
+    const name = b.label || b.category
+      || (b.kind === "card" ? cards.find(c => c.id === b.ref_id)?.name
+        : b.kind === "reserve" ? jars.find(j => j.id === b.ref_id)?.name
+        : b.kind === "investment" ? invs.find(i => i.id === b.ref_id)?.name
+        : "—") || "—";
+    return (
+      <div key={b.id} className="cozy-card p-4">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="font-medium capitalize">{name}</div>
+          <div className="flex items-center gap-2">
+            {b.kind === "investment" && (
+              <Input type="number" step="0.01" className="w-28" placeholder="Realizado"
+                value={b.realized_amount ?? ""} onChange={(e) => updateBudget(b.id, { realized_amount: e.target.value === "" ? null : +e.target.value })} />
+            )}
+            <Input type="number" step="0.01" className="w-28" value={b.amount}
+              onChange={(e) => updateBudget(b.id, { amount: +e.target.value })} />
+            <button onClick={() => removeBudget(b.id)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+          </div>
+        </div>
+        <div className="mb-1 flex flex-wrap justify-between gap-2 text-sm">
+          <span>Realizado {fmtBRL(r)} de {fmtBRL(amt)}</span>
+          <span className={diff < 0 ? "text-rose-600" : "text-muted-foreground"}>{diff >= 0 ? `Sobra ${fmtBRL(diff)}` : `Excedeu ${fmtBRL(-diff)}`} · {Math.round(pct)}%</span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-accent"><div className={`h-full ${colorFor(pct)}`} style={{ width: `${Math.min(100, pct)}%` }} /></div>
+      </div>
+    );
+  };
+
+  const sectionEmpty = (label: string) => <p className="text-sm text-muted-foreground">Nada planejado em {label} ainda.</p>;
+
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-6">
+      {/* Month switcher */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <button onClick={() => setMonth(addMonth(month, -1))} className="rounded-full bg-accent px-3 py-1 text-sm">←</button>
           <div className="font-display text-lg capitalize">{labelMonth(month)}</div>
           <button onClick={() => setMonth(addMonth(month, 1))} className="rounded-full bg-accent px-3 py-1 text-sm">→</button>
         </div>
-        <Button onClick={() => setOpen(true)} className="rounded-full"><Plus className="mr-1 h-4 w-4" />Categoria</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => { setIncEditing(null); setIncOpen(true); }} variant="outline" className="rounded-full"><Plus className="mr-1 h-4 w-4" />Receita prevista</Button>
+          <Button onClick={() => setBOpen(true)} className="rounded-full"><Plus className="mr-1 h-4 w-4" />Item no plano</Button>
+        </div>
       </div>
 
-      <div className="cozy-card mb-4 p-5">
+      {/* Dashboard */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <StatCard label="Receita prevista" value={fmtBRL(totalIncomePlanned)} icon={TrendingUp} tint="mint" />
+        <StatCard label="Receita recebida" value={fmtBRL(totalIncomeReceived || realIncomeMonth)} icon={CheckCircle2} tint="primary"
+          hint={totalIncomePlanned > 0 ? `${Math.round(((totalIncomeReceived || realIncomeMonth) / totalIncomePlanned) * 100)}% do previsto` : undefined} />
+        <StatCard label="Total planejado" value={fmtBRL(totalPlanned)} icon={Target} tint="sand"
+          hint={totalIncomePlanned > 0 ? `${usedPct}% da renda` : undefined} />
+        <StatCard label={freeBalance >= 0 ? "Saldo livre" : "Excedendo a renda"} value={fmtBRL(Math.abs(freeBalance))} icon={Sparkles}
+          tint={freeBalance >= 0 ? "blush" : "blush"} />
+      </div>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <StatCard label="Total gasto no mês" value={fmtBRL(spentTotal)} icon={TrendingDown} tint="blush" />
+        <StatCard label="Economia do mês" value={fmtBRL(economy)} icon={PiggyBank} tint="mint"
+          hint={realIncomeMonth > 0 ? `${Math.round((economy / realIncomeMonth) * 100)}% da renda` : undefined} />
+        <StatCard label="Planejado realizado" value={fmtBRL(realized)} tint="primary"
+          hint={totalPlanned > 0 ? `${Math.round((realized / totalPlanned) * 100)}% do plano` : undefined} />
+        <StatCard label="Faltam para a renda" value={fmtBRL(Math.max(0, totalIncomePlanned - (totalIncomeReceived || realIncomeMonth)))} tint="sand" />
+      </div>
+
+      {/* Receitas previstas */}
+      <div className="cozy-card p-5">
         <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 font-display text-lg"><Target className="h-4 w-4 text-primary" />Orçamento total do mês</div>
-          <Input type="number" step="0.01" className="w-40" value={total?.amount ?? 0}
-            onChange={(e) => upsertBudget(null, +e.target.value)} />
+          <div className="flex items-center gap-2 font-display text-lg"><TrendingUp className="h-4 w-4 text-primary" />Receitas previstas</div>
+          <span className="text-sm text-muted-foreground">Previsto {fmtBRL(totalIncomePlanned)} · Recebido {fmtBRL(totalIncomeReceived)}</span>
         </div>
-        {total && Number(total.amount) > 0 && (() => {
-          const pct = (spentTotal / Number(total.amount)) * 100;
+        {!monthIncomes.length ? (
+          <p className="text-sm text-muted-foreground">Cadastre suas receitas previstas (salário, VR/VA, freelances…) para começar o planejamento.</p>
+        ) : (
+          <div className="space-y-2">
+            {monthIncomes.map(p => {
+              const acc = accounts.find(a => a.id === p.account_id);
+              return (
+                <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-accent/40 px-3 py-2">
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => toggleReceived(p)} className={`grid h-7 w-7 place-items-center rounded-full border ${p.received ? "border-emerald-500 bg-emerald-500/15 text-emerald-700" : "border-muted-foreground/30 text-muted-foreground"}`}>
+                      <CheckCircle2 className="h-4 w-4" />
+                    </button>
+                    <div>
+                      <div className="font-medium">{p.description}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {p.category && <>{p.category} · </>}
+                        {p.expected_date && <>{formatDateBR(p.expected_date)} </>}
+                        {acc && <> · {acc.name}</>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`font-medium ${p.received ? "text-emerald-700" : ""}`}>{fmtBRL(Number(p.amount))}</span>
+                    <button onClick={() => { setIncEditing(p); setIncOpen(true); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-foreground"><Pencil className="h-4 w-4" /></button>
+                    <button onClick={() => removeIncome(p.id)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Total budget */}
+      <div className="cozy-card p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 font-display text-lg"><Target className="h-4 w-4 text-primary" />Teto de gastos do mês (opcional)</div>
+          <Input type="number" step="0.01" className="w-40" value={totalRow?.amount ?? 0}
+            onChange={(e) => upsertBudget({ kind: "category", category: null, amount: +e.target.value })} />
+        </div>
+        {totalRow && Number(totalRow.amount) > 0 && (() => {
+          const pct = (spentTotal / Number(totalRow.amount)) * 100;
           return (
             <div>
-              <div className="mb-1 flex justify-between text-sm"><span>{fmtBRL(spentTotal)} de {fmtBRL(Number(total.amount))}</span><span className={pct >= 100 ? "text-rose-600" : "text-muted-foreground"}>{Math.round(pct)}%</span></div>
+              <div className="mb-1 flex justify-between text-sm"><span>{fmtBRL(spentTotal)} de {fmtBRL(Number(totalRow.amount))}</span><span className={pct >= 100 ? "text-rose-600" : "text-muted-foreground"}>{Math.round(pct)}%</span></div>
               <div className="h-2 overflow-hidden rounded-full bg-accent"><div className={`h-full ${colorFor(pct)}`} style={{ width: `${Math.min(100, pct)}%` }} /></div>
             </div>
           );
         })()}
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      {/* Sections by kind */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 font-display text-lg"><Target className="h-4 w-4 text-primary" />Categorias</div>
+            <span className="text-sm text-muted-foreground">{fmtBRL(sumReal(catBudgets))} / {fmtBRL(plannedCats)}</span>
+          </div>
+          {catBudgets.length ? catBudgets.map(renderBudgetRow) : sectionEmpty("categorias")}
+        </div>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 font-display text-lg"><CreditCard className="h-4 w-4 text-primary" />Cartões</div>
+            <span className="text-sm text-muted-foreground">{fmtBRL(sumReal(cardBudgets))} / {fmtBRL(plannedCards)}</span>
+          </div>
+          {cardBudgets.length ? cardBudgets.map(renderBudgetRow) : sectionEmpty("cartões")}
+        </div>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 font-display text-lg"><PiggyBank className="h-4 w-4 text-primary" />Reservas</div>
+            <span className="text-sm text-muted-foreground">{fmtBRL(sumReal(reserveBudgets))} / {fmtBRL(plannedReserves)}</span>
+          </div>
+          {reserveBudgets.length ? reserveBudgets.map(renderBudgetRow) : sectionEmpty("reservas")}
+        </div>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 font-display text-lg"><LineChart className="h-4 w-4 text-primary" />Investimentos</div>
+            <span className="text-sm text-muted-foreground">{fmtBRL(sumReal(investBudgets))} / {fmtBRL(plannedInvs)}</span>
+          </div>
+          {investBudgets.length ? investBudgets.map(renderBudgetRow) : sectionEmpty("investimentos")}
+        </div>
+      </div>
+
+      {/* Alerts */}
+      {alerts.length > 0 && (
+        <div className="cozy-card p-5">
+          <div className="mb-3 flex items-center gap-2 font-display text-lg"><Sparkles className="h-4 w-4 text-primary" />Alertas e insights</div>
+          <ul className="space-y-2 text-sm">
+            {alerts.map((a, i) => (
+              <li key={i} className={`rounded-xl px-3 py-2 ${a.tone === "warn" ? "bg-rose-500/10 text-rose-700" : a.tone === "good" ? "bg-emerald-500/10 text-emerald-700" : "bg-accent/50"}`}>{a.text}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Dialog: planned income */}
+      <Dialog open={incOpen} onOpenChange={setIncOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle className="font-display">Nova categoria</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-display">{incEditing ? "Editar receita prevista" : "Nova receita prevista"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Categoria</Label><Input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="alimentação, lazer…" /></div>
-            <div><Label>Limite (R$)</Label><Input type="number" step="0.01" value={form.amount} onChange={e => setForm({ ...form, amount: +e.target.value })} /></div>
-            <Button onClick={addCat} className="w-full rounded-full">Adicionar</Button>
+            <div><Label>Descrição</Label><Input value={incForm.description} onChange={e => setIncForm({ ...incForm, description: e.target.value })} placeholder="Salário, VR, freelance…" /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Categoria</Label><Input value={incForm.category ?? ""} onChange={e => setIncForm({ ...incForm, category: e.target.value })} placeholder="salário, benefício…" /></div>
+              <div><Label>Valor previsto</Label><Input type="number" step="0.01" value={incForm.amount} onChange={e => setIncForm({ ...incForm, amount: +e.target.value })} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Data prevista</Label><Input type="date" value={incForm.expected_date ?? ""} onChange={e => setIncForm({ ...incForm, expected_date: e.target.value })} /></div>
+              <div>
+                <Label>Conta de destino</Label>
+                <select className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={incForm.account_id ?? ""} onChange={e => setIncForm({ ...incForm, account_id: e.target.value || null })}>
+                  <option value="">—</option>
+                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input id="received" type="checkbox" checked={incForm.received} onChange={e => setIncForm({ ...incForm, received: e.target.checked })} />
+              <Label htmlFor="received">Já recebida</Label>
+            </div>
+            <div><Label>Observações</Label><Textarea value={incForm.notes ?? ""} onChange={e => setIncForm({ ...incForm, notes: e.target.value })} /></div>
+            <Button onClick={saveIncome} className="w-full rounded-full">{incEditing ? "Salvar" : "Adicionar"}</Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {!cats.length ? <EmptyState title="Sem categorias planejadas" description="Defina limites por categoria para acompanhar o orçamento." /> : (
-        <div className="space-y-3">
-          {cats.map(b => {
-            const spent = spentByCat[b.category!] ?? 0;
-            const amt = Number(b.amount);
-            const pct = amt ? (spent / amt) * 100 : 0;
-            return (
-              <div key={b.id} className="cozy-card p-4">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <div className="font-medium capitalize">{b.category}</div>
-                  <div className="flex items-center gap-2">
-                    <Input type="number" step="0.01" className="w-32" value={b.amount}
-                      onChange={(e) => upsertBudget(b.category, +e.target.value)} />
-                    <button onClick={() => removeBudget(b.id)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
-                  </div>
-                </div>
-                <div className="mb-1 flex justify-between text-sm">
-                  <span>{fmtBRL(spent)} de {fmtBRL(amt)}</span>
-                  <span className={pct >= 100 ? "text-rose-600" : pct >= 80 ? "text-amber-600" : "text-muted-foreground"}>{Math.round(pct)}%</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-accent"><div className={`h-full ${colorFor(pct)}`} style={{ width: `${Math.min(100, pct)}%` }} /></div>
+      {/* Dialog: new budget item */}
+      <Dialog open={bOpen} onOpenChange={setBOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="font-display">Novo item no plano</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Tipo</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {(["category", "card", "reserve", "investment"] as BudgetKind[]).map(k => (
+                  <button key={k} type="button" onClick={() => setBForm({ ...bForm, kind: k, category: "", ref_id: "" })}
+                    className={`rounded-full px-3 py-2 text-xs capitalize ${bForm.kind === k ? "bg-primary text-primary-foreground" : "bg-accent"}`}>
+                    {k === "category" ? "Categoria" : k === "card" ? "Cartão" : k === "reserve" ? "Reserva" : "Investimento"}
+                  </button>
+                ))}
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+            {bForm.kind === "category" && (
+              <div><Label>Categoria</Label><Input value={bForm.category} onChange={e => setBForm({ ...bForm, category: e.target.value })} placeholder="mercado, lazer, pets…" /></div>
+            )}
+            {bForm.kind === "card" && (
+              <div>
+                <Label>Cartão</Label>
+                <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={bForm.ref_id} onChange={e => setBForm({ ...bForm, ref_id: e.target.value })}>
+                  <option value="">—</option>
+                  {cards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            )}
+            {bForm.kind === "reserve" && (
+              <div>
+                <Label>Reserva</Label>
+                <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={bForm.ref_id} onChange={e => setBForm({ ...bForm, ref_id: e.target.value })}>
+                  <option value="">—</option>
+                  {jars.map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
+                </select>
+              </div>
+            )}
+            {bForm.kind === "investment" && (
+              <div>
+                <Label>Investimento</Label>
+                <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={bForm.ref_id} onChange={e => setBForm({ ...bForm, ref_id: e.target.value })}>
+                  <option value="">—</option>
+                  {invs.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                </select>
+              </div>
+            )}
+            <div><Label>Valor planejado (R$)</Label><Input type="number" step="0.01" value={bForm.amount} onChange={e => setBForm({ ...bForm, amount: +e.target.value })} /></div>
+            <Button onClick={saveNewBudget} className="w-full rounded-full">Adicionar ao plano</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
 
 // ============================================================
 // CONFIG
