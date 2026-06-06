@@ -167,7 +167,7 @@ function FinancasPage() {
               ["cards", "Cartões"],
               ["jars", "Reservas"],
               ["invs", "Investimentos"],
-              ["budget", "Orçamento"],
+              ["budget", "Planejamento"],
               ["config", "Configurações"],
             ].map(([v, l]) => (
               <TabsTrigger key={v} value={v} className="shrink-0 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{l}</TabsTrigger>
