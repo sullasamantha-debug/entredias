@@ -146,7 +146,11 @@ export type Database = {
           category: string | null
           created_at: string
           id: string
+          kind: string
+          label: string | null
           month: string
+          realized_amount: number | null
+          ref_id: string | null
           user_id: string
         }
         Insert: {
@@ -154,7 +158,11 @@ export type Database = {
           category?: string | null
           created_at?: string
           id?: string
+          kind?: string
+          label?: string | null
           month: string
+          realized_amount?: number | null
+          ref_id?: string | null
           user_id: string
         }
         Update: {
@@ -162,7 +170,11 @@ export type Database = {
           category?: string | null
           created_at?: string
           id?: string
+          kind?: string
+          label?: string | null
           month?: string
+          realized_amount?: number | null
+          ref_id?: string | null
           user_id?: string
         }
         Relationships: []
@@ -544,6 +556,48 @@ export type Database = {
           tags?: string[] | null
           user_id?: string
           watched_date?: string | null
+        }
+        Relationships: []
+      }
+      planned_incomes: {
+        Row: {
+          account_id: string | null
+          amount: number
+          category: string | null
+          created_at: string
+          description: string
+          expected_date: string | null
+          id: string
+          month: string
+          notes: string | null
+          received: boolean
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount?: number
+          category?: string | null
+          created_at?: string
+          description: string
+          expected_date?: string | null
+          id?: string
+          month: string
+          notes?: string | null
+          received?: boolean
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          category?: string | null
+          created_at?: string
+          description?: string
+          expected_date?: string | null
+          id?: string
+          month?: string
+          notes?: string | null
+          received?: boolean
+          user_id?: string
         }
         Relationships: []
       }
