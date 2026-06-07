@@ -1609,18 +1609,25 @@ function PlanningTab({
           <DialogHeader><DialogTitle className="font-display">Novo item no plano</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label>Tipo</Label>
+              <Label>Tipo da categoria</Label>
               <div className="grid grid-cols-4 gap-2">
                 {(["category", "card", "reserve", "investment"] as BudgetKind[]).map(k => (
                   <button key={k} type="button" onClick={() => setBForm({ ...bForm, kind: k, category: "", ref_id: "" })}
                     className={`rounded-full px-3 py-2 text-xs capitalize ${bForm.kind === k ? "bg-primary text-primary-foreground" : "bg-accent"}`}>
-                    {k === "category" ? "Categoria" : k === "card" ? "Cartão" : k === "reserve" ? "Reserva" : "Investimento"}
+                    {k === "category" ? "Despesa" : k === "card" ? "Cartão" : k === "reserve" ? "Reserva" : "Investimento"}
                   </button>
                 ))}
               </div>
+              <p className="mt-1 text-xs text-muted-foreground">O item será agrupado automaticamente na seção correspondente.</p>
             </div>
             {bForm.kind === "category" && (
-              <div><Label>Categoria</Label><Input value={bForm.category} onChange={e => setBForm({ ...bForm, category: e.target.value })} placeholder="mercado, lazer, pets…" /></div>
+              <div>
+                <Label>Categoria de despesa</Label>
+                <Input list="budget-expense-suggestions" value={bForm.category} onChange={e => setBForm({ ...bForm, category: e.target.value })} placeholder="Mercado, Lazer, Pets…" />
+                <datalist id="budget-expense-suggestions">
+                  {EXPENSE_CAT_SUGGESTIONS.map(c => <option key={c} value={c} />)}
+                </datalist>
+              </div>
             )}
             {bForm.kind === "card" && (
               <div>
