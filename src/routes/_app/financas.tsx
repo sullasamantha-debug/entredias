@@ -186,7 +186,7 @@ function FinancasPage() {
         <TabsContent value="tx"><Transactions fins={finList} cards={cards ?? []} accounts={accountList} /></TabsContent>
         <TabsContent value="cards"><CardsTab cards={cards ?? []} fins={finList} accounts={accountList} /></TabsContent>
         <TabsContent value="jars"><Jars jars={jars ?? []} accounts={accountList} /></TabsContent>
-        <TabsContent value="invs"><Investments invs={invs ?? []} /></TabsContent>
+        <TabsContent value="invs"><Investments invs={invs ?? []} accounts={accountList} /></TabsContent>
         <TabsContent value="budget"><PlanningTab budgets={budgets ?? []} fins={finList} accounts={accountList} jars={jars ?? []} invs={invs ?? []} cards={cards ?? []} plannedIncomes={plannedIncomes ?? []} movements={movements ?? []} /></TabsContent>
         <TabsContent value="config"><Config settings={settings ?? null} hasAccounts={accountList.length > 0} /></TabsContent>
       </Tabs>
