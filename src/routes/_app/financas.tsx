@@ -985,24 +985,35 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
       <Dialog open={!!move} onOpenChange={(o) => !o && setMove(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle className="font-display">
-            {move?.mode === "deposit" ? "Aumentar reserva" : move?.mode === "withdraw" ? "Reduzir reserva" : "Transferir entre reservas"}
+            {move?.mode === "deposit" ? "Reservar valor" : move?.mode === "withdraw" ? "Liberar / resgatar valor" : "Transferir entre reservas"}
             {" "}— {move?.jar.name}
           </DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Valor</Label><Input type="number" step="0.01" value={moveAmt} onChange={e => setMoveAmt(+e.target.value)} /></div>
             {move?.mode === "transfer" && (
               <div>
-                <Label>Para</Label>
+                <Label>Para a reserva</Label>
                 <select value={moveTo} onChange={e => setMoveTo(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                   <option value="">Selecione…</option>
                   {jars.filter(j => j.id !== move.jar.id).map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
                 </select>
               </div>
             )}
+            {move?.mode === "withdraw" && (
+              <div>
+                <Label>Conta de destino</Label>
+                <select value={moveAcc} onChange={e => setMoveAcc(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <option value="">Selecione a conta…</option>
+                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+                <p className="mt-1 text-xs text-muted-foreground">O valor aparecerá no extrato da conta como <strong>Transferência patrimonial</strong> — não conta como nova receita.</p>
+              </div>
+            )}
             <Button onClick={applyMove} className="w-full rounded-full">Confirmar</Button>
           </div>
         </DialogContent>
       </Dialog>
+
 
       {!jars.length ? <EmptyState title="Sem reservas" description="Crie separações para suas metas: emergência, viagem, casa, presente…" /> : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
