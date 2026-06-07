@@ -1579,7 +1579,13 @@ function PlanningTab({
           <div className="space-y-3">
             <div><Label>Descrição</Label><Input value={incForm.description} onChange={e => setIncForm({ ...incForm, description: e.target.value })} placeholder="Salário, VR, freelance…" /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Categoria</Label><Input value={incForm.category ?? ""} onChange={e => setIncForm({ ...incForm, category: e.target.value })} placeholder="salário, benefício…" /></div>
+              <div>
+                <Label>Categoria</Label>
+                <Input list="income-cat-suggestions" value={incForm.category ?? ""} onChange={e => setIncForm({ ...incForm, category: e.target.value })} placeholder="Salário, Benefício…" />
+                <datalist id="income-cat-suggestions">
+                  {INCOME_CAT_SUGGESTIONS.map(c => <option key={c} value={c} />)}
+                </datalist>
+              </div>
               <div><Label>Valor previsto</Label><Input type="number" step="0.01" value={incForm.amount} onChange={e => setIncForm({ ...incForm, amount: +e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
