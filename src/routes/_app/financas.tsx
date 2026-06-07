@@ -632,7 +632,12 @@ function Transactions({ fins, cards, accounts }: { fins: Fin[]; cards: Card[]; a
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Categoria</Label><Input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="alimentação…" /></div>
+                  <div>
+                    <Label>Categoria</Label>
+                    <Input list={form.kind === "income" ? "tx-income-cats" : "tx-expense-cats"} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder={form.kind === "income" ? "Salário, Freelance…" : "Mercado, Lazer…"} />
+                    <datalist id="tx-expense-cats">{EXPENSE_CAT_SUGGESTIONS.map(c => <option key={c} value={c} />)}</datalist>
+                    <datalist id="tx-income-cats">{INCOME_CAT_SUGGESTIONS.map(c => <option key={c} value={c} />)}</datalist>
+                  </div>
                   <div><Label>Forma</Label>
                     <select value={form.payment_method} onChange={e => setForm({ ...form, payment_method: e.target.value, card_id: e.target.value === "crédito" ? form.card_id : "" })}
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
