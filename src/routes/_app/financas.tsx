@@ -966,7 +966,11 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
         <DialogContent>
           <DialogHeader><DialogTitle className="font-display">{editing ? "Editar reserva" : "Nova reserva"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Emergência, Viagem, Casa…" /></div>
+            <div>
+              <Label>Nome</Label>
+              <Input list="jar-name-suggestions" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Emergência, Viagem, Casa…" />
+              <datalist id="jar-name-suggestions">{RESERVE_CAT_SUGGESTIONS.map(c => <option key={c} value={c} />)}</datalist>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Valor reservado</Label><Input type="number" step="0.01" value={form.current_amount} onChange={e => setForm({ ...form, current_amount: +e.target.value })} /></div>
               <div><Label>Meta (opcional)</Label><Input type="number" step="0.01" value={form.goal} onChange={e => setForm({ ...form, goal: +e.target.value })} /></div>
