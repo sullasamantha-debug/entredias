@@ -1060,7 +1060,7 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
 
 // ============================================================
 // INVESTMENTS
-function Investments({ invs }: { invs: Inv[] }) {
+function Investments({ invs, accounts }: { invs: Inv[]; accounts: Account[] }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -1068,6 +1068,11 @@ function Investments({ invs }: { invs: Inv[] }) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const emptyInv = { name: "", category: "outros", institution: "", invested_amount: 0, current_amount: 0, invested_date: localDateKey(), notes: "" };
   const [form, setForm] = useState(emptyInv);
+
+  // Redeem state
+  const [redeem, setRedeem] = useState<Inv | null>(null);
+  const [redeemAmt, setRedeemAmt] = useState(0);
+  const [redeemAcc, setRedeemAcc] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -1080,6 +1085,10 @@ function Investments({ invs }: { invs: Inv[] }) {
     } : emptyInv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing]);
+
+  useEffect(() => {
+    if (redeem) { setRedeemAmt(0); setRedeemAcc(accounts[0]?.id ?? ""); }
+  }, [redeem, accounts]);
 
   const save = async () => {
     if (!user || !form.name) return;
@@ -1105,6 +1114,32 @@ function Investments({ invs }: { invs: Inv[] }) {
     qc.invalidateQueries({ queryKey: ["investments"] });
   };
 
+  const applyRedeem = async () => {
+    if (!redeem || !user) return;
+    const inv = redeem;
+    const cur = Number(inv.current_amount);
+    if (redeemAmt <= 0) return toast.error("Informe o valor do resgate.");
+    if (redeemAmt > cur) return toast.error("Valor maior que o disponível no investimento.");
+    if (!redeemAcc) return toast.error("Escolha a conta de destino.");
+    const ratio = cur > 0 ? (cur - redeemAmt) / cur : 0;
+    const newCur = cur - redeemAmt;
+    const newInvested = Number(inv.invested_amount) * ratio;
+    await supabase.from("investments").update({
+      current_amount: newCur, invested_amount: newInvested,
+    }).eq("id", inv.id);
+    await supabase.from("finances").insert({
+      user_id: user.id, kind: "transfer", amount: redeemAmt,
+      account_id: null, to_account_id: redeemAcc,
+      category: "transferência patrimonial",
+      description: `Resgate de Investimento: ${inv.name}`,
+      date: localDateKey(), payment_method: "transferência", paid: true,
+    });
+    toast.success("Resgate registrado no extrato da conta.");
+    setRedeem(null);
+    qc.invalidateQueries({ queryKey: ["investments"] });
+    qc.invalidateQueries({ queryKey: ["finances"] });
+  };
+
   const totalInv = invs.reduce((a, i) => a + Number(i.invested_amount), 0);
   const totalCur = invs.reduce((a, i) => a + Number(i.current_amount), 0);
   const gain = totalCur - totalInv;
@@ -1126,7 +1161,13 @@ function Investments({ invs }: { invs: Inv[] }) {
         <DialogContent>
           <DialogHeader><DialogTitle className="font-display">{editing ? "Editar" : "Novo investimento"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Tesouro Selic 2029…" /></div>
+            <div>
+              <Label>Nome</Label>
+              <Input list="invest-name-suggestions" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Tesouro Selic 2029…" />
+              <datalist id="invest-name-suggestions">
+                {INVEST_CAT_SUGGESTIONS.map(c => <option key={c} value={c} />)}
+              </datalist>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Instituição</Label><Input value={form.institution} onChange={e => setForm({ ...form, institution: e.target.value })} placeholder="Nubank, XP, Inter…" /></div>
               <div><Label>Tipo</Label>
@@ -1146,13 +1187,34 @@ function Investments({ invs }: { invs: Inv[] }) {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!redeem} onOpenChange={(o) => !o && setRedeem(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="font-display">Resgatar — {redeem?.name}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-xl bg-accent/40 px-3 py-2 text-sm text-muted-foreground">
+              Disponível: <strong>{fmtBRL(Number(redeem?.current_amount ?? 0))}</strong>
+            </div>
+            <div><Label>Valor do resgate</Label><Input type="number" step="0.01" value={redeemAmt} onChange={e => setRedeemAmt(+e.target.value)} /></div>
+            <div>
+              <Label>Conta de destino</Label>
+              <select value={redeemAcc} onChange={e => setRedeemAcc(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                <option value="">Selecione a conta…</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">O valor aparecerá no extrato da conta como <strong>Transferência patrimonial</strong> — não conta como nova receita.</p>
+            </div>
+            <Button onClick={applyRedeem} className="w-full rounded-full">Confirmar resgate</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {!invs.length ? <EmptyState title="Sem investimentos" description="Registre seus investimentos para acompanhar o patrimônio." /> : (
         <div className="space-y-2">
           {invs.map(i => {
             const g = Number(i.current_amount) - Number(i.invested_amount);
             const gp = i.invested_amount ? (g / Number(i.invested_amount)) * 100 : 0;
             return (
-              <div key={i.id} className="cozy-card flex items-center gap-3 p-4">
+              <div key={i.id} className="cozy-card flex flex-wrap items-center gap-3 p-4">
                 <div className="grid h-10 w-10 place-items-center rounded-xl bg-sand/60"><LineChart className="h-4 w-4" /></div>
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">{i.name}</div>
@@ -1167,6 +1229,9 @@ function Investments({ invs }: { invs: Inv[] }) {
                   <div className="font-display text-lg">{fmtBRL(Number(i.current_amount))}</div>
                   <div className={`text-xs ${g >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{g >= 0 ? "+" : ""}{gp.toFixed(2)}%</div>
                 </div>
+                <Button size="sm" variant="secondary" className="rounded-full" onClick={() => setRedeem(i)} disabled={!accounts.length} title={!accounts.length ? "Cadastre uma conta primeiro" : "Resgatar para uma conta"}>
+                  <ArrowRightLeft className="mr-1 h-3.5 w-3.5" />Resgatar
+                </Button>
                 <button onClick={() => { setEditing(i); setOpen(true); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"><Pencil className="h-4 w-4" /></button>
                 <button onClick={() => setConfirmId(i.id)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
               </div>
