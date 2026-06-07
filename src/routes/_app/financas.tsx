@@ -875,6 +875,7 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
   const [move, setMove] = useState<{ jar: Jar; mode: "deposit" | "withdraw" | "transfer" } | null>(null);
   const [moveAmt, setMoveAmt] = useState(0);
   const [moveTo, setMoveTo] = useState("");
+  const [moveAcc, setMoveAcc] = useState("");
   const empty = { name: "", current_amount: 0, goal: 0, color: "#7dd3fc", notes: "", account_id: "" };
   const [form, setForm] = useState(empty);
 
@@ -886,6 +887,12 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
     } : empty);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing]);
+
+  // Default the destination account when opening the withdraw dialog
+  useEffect(() => {
+    if (move?.mode === "withdraw") setMoveAcc(move.jar.account_id ?? accounts[0]?.id ?? "");
+    else setMoveAcc("");
+  }, [move, accounts]);
 
   const save = async () => {
     if (!user || !form.name) return;
@@ -911,10 +918,22 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
   const applyMove = async () => {
     if (!move || !moveAmt) return;
     const jar = move.jar;
+    const today = localDateKey();
     if (move.mode === "deposit") {
       await supabase.from("savings_jars").update({ current_amount: Number(jar.current_amount) + moveAmt }).eq("id", jar.id);
     } else if (move.mode === "withdraw") {
+      if (!moveAcc) return toast.error("Escolha a conta de destino do resgate.");
       await supabase.from("savings_jars").update({ current_amount: Math.max(0, Number(jar.current_amount) - moveAmt) }).eq("id", jar.id);
+      // Patrimonial transfer: credits the destination account without counting as income/expense
+      await supabase.from("finances").insert({
+        user_id: user!.id, kind: "transfer", amount: moveAmt,
+        account_id: null, to_account_id: moveAcc,
+        category: "transferência patrimonial",
+        description: `Resgate de Reserva: ${jar.name}`,
+        date: today, payment_method: "transferência", paid: true,
+      });
+      qc.invalidateQueries({ queryKey: ["finances"] });
+      toast.success("Resgate registrado no extrato da conta.");
     } else {
       if (!moveTo) return toast.error("Escolha a reserva de destino.");
       const target = jars.find(j => j.id === moveTo);
@@ -924,10 +943,11 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
     }
     await supabase.from("savings_movements").insert({
       user_id: user!.id, jar_id: jar.id, kind: move.mode === "transfer" ? "transfer_out" : move.mode,
-      amount: moveAmt, date: localDateKey(),
+      amount: moveAmt, date: today,
     });
-    setMove(null); setMoveAmt(0); setMoveTo("");
+    setMove(null); setMoveAmt(0); setMoveTo(""); setMoveAcc("");
     qc.invalidateQueries({ queryKey: ["jars"] });
+    qc.invalidateQueries({ queryKey: ["savings_movements"] });
   };
 
   return (
