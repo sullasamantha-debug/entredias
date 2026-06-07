@@ -63,6 +63,12 @@ const ACCOUNT_TYPES: { value: string; label: string }[] = [
 ];
 const ACCOUNT_TYPE_LABEL = Object.fromEntries(ACCOUNT_TYPES.map(t => [t.value, t.label]));
 
+// Category suggestions per type — used as datalist hints in budget / income forms
+const INCOME_CAT_SUGGESTIONS = ["Salário", "Freelance", "Rendimentos", "Reembolso", "Vale Alimentação", "13º", "Bônus"];
+const EXPENSE_CAT_SUGGESTIONS = ["Mercado", "Restaurante", "Transporte", "Saúde", "Pets", "Educação", "Lazer", "Assinaturas", "Viagem", "Casa", "Contas"];
+const RESERVE_CAT_SUGGESTIONS = ["Emergência", "Viagem", "Casa", "Carro", "Estudos", "Presente"];
+const INVEST_CAT_SUGGESTIONS = ["Tesouro Selic", "Tesouro IPCA", "CDB", "LCI", "LCA", "Fundos", "Ações", "Cripto"];
+
 // Compute per-account balance considering income, expenses (paid only), and transfers
 function balanceFor(account: Account, fins: Fin[], today: string) {
   let bal = Number(account.initial_balance) || 0;
