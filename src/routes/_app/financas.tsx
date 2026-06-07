@@ -63,6 +63,12 @@ const ACCOUNT_TYPES: { value: string; label: string }[] = [
 ];
 const ACCOUNT_TYPE_LABEL = Object.fromEntries(ACCOUNT_TYPES.map(t => [t.value, t.label]));
 
+// Category suggestions per type — used as datalist hints in budget / income forms
+const INCOME_CAT_SUGGESTIONS = ["Salário", "Freelance", "Rendimentos", "Reembolso", "Vale Alimentação", "13º", "Bônus"];
+const EXPENSE_CAT_SUGGESTIONS = ["Mercado", "Restaurante", "Transporte", "Saúde", "Pets", "Educação", "Lazer", "Assinaturas", "Viagem", "Casa", "Contas"];
+const RESERVE_CAT_SUGGESTIONS = ["Emergência", "Viagem", "Casa", "Carro", "Estudos", "Presente"];
+const INVEST_CAT_SUGGESTIONS = ["Tesouro Selic", "Tesouro IPCA", "CDB", "LCI", "LCA", "Fundos", "Ações", "Cripto"];
+
 // Compute per-account balance considering income, expenses (paid only), and transfers
 function balanceFor(account: Account, fins: Fin[], today: string) {
   let bal = Number(account.initial_balance) || 0;
@@ -180,7 +186,7 @@ function FinancasPage() {
         <TabsContent value="tx"><Transactions fins={finList} cards={cards ?? []} accounts={accountList} /></TabsContent>
         <TabsContent value="cards"><CardsTab cards={cards ?? []} fins={finList} accounts={accountList} /></TabsContent>
         <TabsContent value="jars"><Jars jars={jars ?? []} accounts={accountList} /></TabsContent>
-        <TabsContent value="invs"><Investments invs={invs ?? []} /></TabsContent>
+        <TabsContent value="invs"><Investments invs={invs ?? []} accounts={accountList} /></TabsContent>
         <TabsContent value="budget"><PlanningTab budgets={budgets ?? []} fins={finList} accounts={accountList} jars={jars ?? []} invs={invs ?? []} cards={cards ?? []} plannedIncomes={plannedIncomes ?? []} movements={movements ?? []} /></TabsContent>
         <TabsContent value="config"><Config settings={settings ?? null} hasAccounts={accountList.length > 0} /></TabsContent>
       </Tabs>
@@ -626,7 +632,12 @@ function Transactions({ fins, cards, accounts }: { fins: Fin[]; cards: Card[]; a
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Categoria</Label><Input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="alimentação…" /></div>
+                  <div>
+                    <Label>Categoria</Label>
+                    <Input list={form.kind === "income" ? "tx-income-cats" : "tx-expense-cats"} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder={form.kind === "income" ? "Salário, Freelance…" : "Mercado, Lazer…"} />
+                    <datalist id="tx-expense-cats">{EXPENSE_CAT_SUGGESTIONS.map(c => <option key={c} value={c} />)}</datalist>
+                    <datalist id="tx-income-cats">{INCOME_CAT_SUGGESTIONS.map(c => <option key={c} value={c} />)}</datalist>
+                  </div>
                   <div><Label>Forma</Label>
                     <select value={form.payment_method} onChange={e => setForm({ ...form, payment_method: e.target.value, card_id: e.target.value === "crédito" ? form.card_id : "" })}
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
@@ -869,6 +880,7 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
   const [move, setMove] = useState<{ jar: Jar; mode: "deposit" | "withdraw" | "transfer" } | null>(null);
   const [moveAmt, setMoveAmt] = useState(0);
   const [moveTo, setMoveTo] = useState("");
+  const [moveAcc, setMoveAcc] = useState("");
   const empty = { name: "", current_amount: 0, goal: 0, color: "#7dd3fc", notes: "", account_id: "" };
   const [form, setForm] = useState(empty);
 
@@ -880,6 +892,12 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
     } : empty);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing]);
+
+  // Default the destination account when opening the withdraw dialog
+  useEffect(() => {
+    if (move?.mode === "withdraw") setMoveAcc(move.jar.account_id ?? accounts[0]?.id ?? "");
+    else setMoveAcc("");
+  }, [move, accounts]);
 
   const save = async () => {
     if (!user || !form.name) return;
@@ -905,10 +923,22 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
   const applyMove = async () => {
     if (!move || !moveAmt) return;
     const jar = move.jar;
+    const today = localDateKey();
     if (move.mode === "deposit") {
       await supabase.from("savings_jars").update({ current_amount: Number(jar.current_amount) + moveAmt }).eq("id", jar.id);
     } else if (move.mode === "withdraw") {
+      if (!moveAcc) return toast.error("Escolha a conta de destino do resgate.");
       await supabase.from("savings_jars").update({ current_amount: Math.max(0, Number(jar.current_amount) - moveAmt) }).eq("id", jar.id);
+      // Patrimonial transfer: credits the destination account without counting as income/expense
+      await supabase.from("finances").insert({
+        user_id: user!.id, kind: "transfer", amount: moveAmt,
+        account_id: null, to_account_id: moveAcc,
+        category: "transferência patrimonial",
+        description: `Resgate de Reserva: ${jar.name}`,
+        date: today, payment_method: "transferência", paid: true,
+      });
+      qc.invalidateQueries({ queryKey: ["finances"] });
+      toast.success("Resgate registrado no extrato da conta.");
     } else {
       if (!moveTo) return toast.error("Escolha a reserva de destino.");
       const target = jars.find(j => j.id === moveTo);
@@ -918,10 +948,11 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
     }
     await supabase.from("savings_movements").insert({
       user_id: user!.id, jar_id: jar.id, kind: move.mode === "transfer" ? "transfer_out" : move.mode,
-      amount: moveAmt, date: localDateKey(),
+      amount: moveAmt, date: today,
     });
-    setMove(null); setMoveAmt(0); setMoveTo("");
+    setMove(null); setMoveAmt(0); setMoveTo(""); setMoveAcc("");
     qc.invalidateQueries({ queryKey: ["jars"] });
+    qc.invalidateQueries({ queryKey: ["savings_movements"] });
   };
 
   return (
@@ -935,7 +966,11 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
         <DialogContent>
           <DialogHeader><DialogTitle className="font-display">{editing ? "Editar reserva" : "Nova reserva"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Emergência, Viagem, Casa…" /></div>
+            <div>
+              <Label>Nome</Label>
+              <Input list="jar-name-suggestions" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Emergência, Viagem, Casa…" />
+              <datalist id="jar-name-suggestions">{RESERVE_CAT_SUGGESTIONS.map(c => <option key={c} value={c} />)}</datalist>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Valor reservado</Label><Input type="number" step="0.01" value={form.current_amount} onChange={e => setForm({ ...form, current_amount: +e.target.value })} /></div>
               <div><Label>Meta (opcional)</Label><Input type="number" step="0.01" value={form.goal} onChange={e => setForm({ ...form, goal: +e.target.value })} /></div>
@@ -959,24 +994,35 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
       <Dialog open={!!move} onOpenChange={(o) => !o && setMove(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle className="font-display">
-            {move?.mode === "deposit" ? "Aumentar reserva" : move?.mode === "withdraw" ? "Reduzir reserva" : "Transferir entre reservas"}
+            {move?.mode === "deposit" ? "Reservar valor" : move?.mode === "withdraw" ? "Liberar / resgatar valor" : "Transferir entre reservas"}
             {" "}— {move?.jar.name}
           </DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Valor</Label><Input type="number" step="0.01" value={moveAmt} onChange={e => setMoveAmt(+e.target.value)} /></div>
             {move?.mode === "transfer" && (
               <div>
-                <Label>Para</Label>
+                <Label>Para a reserva</Label>
                 <select value={moveTo} onChange={e => setMoveTo(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                   <option value="">Selecione…</option>
                   {jars.filter(j => j.id !== move.jar.id).map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
                 </select>
               </div>
             )}
+            {move?.mode === "withdraw" && (
+              <div>
+                <Label>Conta de destino</Label>
+                <select value={moveAcc} onChange={e => setMoveAcc(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <option value="">Selecione a conta…</option>
+                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+                <p className="mt-1 text-xs text-muted-foreground">O valor aparecerá no extrato da conta como <strong>Transferência patrimonial</strong> — não conta como nova receita.</p>
+              </div>
+            )}
             <Button onClick={applyMove} className="w-full rounded-full">Confirmar</Button>
           </div>
         </DialogContent>
       </Dialog>
+
 
       {!jars.length ? <EmptyState title="Sem reservas" description="Crie separações para suas metas: emergência, viagem, casa, presente…" /> : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -1023,7 +1069,7 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
 
 // ============================================================
 // INVESTMENTS
-function Investments({ invs }: { invs: Inv[] }) {
+function Investments({ invs, accounts }: { invs: Inv[]; accounts: Account[] }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -1031,6 +1077,11 @@ function Investments({ invs }: { invs: Inv[] }) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const emptyInv = { name: "", category: "outros", institution: "", invested_amount: 0, current_amount: 0, invested_date: localDateKey(), notes: "" };
   const [form, setForm] = useState(emptyInv);
+
+  // Redeem state
+  const [redeem, setRedeem] = useState<Inv | null>(null);
+  const [redeemAmt, setRedeemAmt] = useState(0);
+  const [redeemAcc, setRedeemAcc] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -1043,6 +1094,10 @@ function Investments({ invs }: { invs: Inv[] }) {
     } : emptyInv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing]);
+
+  useEffect(() => {
+    if (redeem) { setRedeemAmt(0); setRedeemAcc(accounts[0]?.id ?? ""); }
+  }, [redeem, accounts]);
 
   const save = async () => {
     if (!user || !form.name) return;
@@ -1068,6 +1123,32 @@ function Investments({ invs }: { invs: Inv[] }) {
     qc.invalidateQueries({ queryKey: ["investments"] });
   };
 
+  const applyRedeem = async () => {
+    if (!redeem || !user) return;
+    const inv = redeem;
+    const cur = Number(inv.current_amount);
+    if (redeemAmt <= 0) return toast.error("Informe o valor do resgate.");
+    if (redeemAmt > cur) return toast.error("Valor maior que o disponível no investimento.");
+    if (!redeemAcc) return toast.error("Escolha a conta de destino.");
+    const ratio = cur > 0 ? (cur - redeemAmt) / cur : 0;
+    const newCur = cur - redeemAmt;
+    const newInvested = Number(inv.invested_amount) * ratio;
+    await supabase.from("investments").update({
+      current_amount: newCur, invested_amount: newInvested,
+    }).eq("id", inv.id);
+    await supabase.from("finances").insert({
+      user_id: user.id, kind: "transfer", amount: redeemAmt,
+      account_id: null, to_account_id: redeemAcc,
+      category: "transferência patrimonial",
+      description: `Resgate de Investimento: ${inv.name}`,
+      date: localDateKey(), payment_method: "transferência", paid: true,
+    });
+    toast.success("Resgate registrado no extrato da conta.");
+    setRedeem(null);
+    qc.invalidateQueries({ queryKey: ["investments"] });
+    qc.invalidateQueries({ queryKey: ["finances"] });
+  };
+
   const totalInv = invs.reduce((a, i) => a + Number(i.invested_amount), 0);
   const totalCur = invs.reduce((a, i) => a + Number(i.current_amount), 0);
   const gain = totalCur - totalInv;
@@ -1089,7 +1170,13 @@ function Investments({ invs }: { invs: Inv[] }) {
         <DialogContent>
           <DialogHeader><DialogTitle className="font-display">{editing ? "Editar" : "Novo investimento"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Tesouro Selic 2029…" /></div>
+            <div>
+              <Label>Nome</Label>
+              <Input list="invest-name-suggestions" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Tesouro Selic 2029…" />
+              <datalist id="invest-name-suggestions">
+                {INVEST_CAT_SUGGESTIONS.map(c => <option key={c} value={c} />)}
+              </datalist>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Instituição</Label><Input value={form.institution} onChange={e => setForm({ ...form, institution: e.target.value })} placeholder="Nubank, XP, Inter…" /></div>
               <div><Label>Tipo</Label>
@@ -1109,13 +1196,34 @@ function Investments({ invs }: { invs: Inv[] }) {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!redeem} onOpenChange={(o) => !o && setRedeem(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="font-display">Resgatar — {redeem?.name}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-xl bg-accent/40 px-3 py-2 text-sm text-muted-foreground">
+              Disponível: <strong>{fmtBRL(Number(redeem?.current_amount ?? 0))}</strong>
+            </div>
+            <div><Label>Valor do resgate</Label><Input type="number" step="0.01" value={redeemAmt} onChange={e => setRedeemAmt(+e.target.value)} /></div>
+            <div>
+              <Label>Conta de destino</Label>
+              <select value={redeemAcc} onChange={e => setRedeemAcc(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                <option value="">Selecione a conta…</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">O valor aparecerá no extrato da conta como <strong>Transferência patrimonial</strong> — não conta como nova receita.</p>
+            </div>
+            <Button onClick={applyRedeem} className="w-full rounded-full">Confirmar resgate</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {!invs.length ? <EmptyState title="Sem investimentos" description="Registre seus investimentos para acompanhar o patrimônio." /> : (
         <div className="space-y-2">
           {invs.map(i => {
             const g = Number(i.current_amount) - Number(i.invested_amount);
             const gp = i.invested_amount ? (g / Number(i.invested_amount)) * 100 : 0;
             return (
-              <div key={i.id} className="cozy-card flex items-center gap-3 p-4">
+              <div key={i.id} className="cozy-card flex flex-wrap items-center gap-3 p-4">
                 <div className="grid h-10 w-10 place-items-center rounded-xl bg-sand/60"><LineChart className="h-4 w-4" /></div>
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">{i.name}</div>
@@ -1130,6 +1238,9 @@ function Investments({ invs }: { invs: Inv[] }) {
                   <div className="font-display text-lg">{fmtBRL(Number(i.current_amount))}</div>
                   <div className={`text-xs ${g >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{g >= 0 ? "+" : ""}{gp.toFixed(2)}%</div>
                 </div>
+                <Button size="sm" variant="secondary" className="rounded-full" onClick={() => setRedeem(i)} disabled={!accounts.length} title={!accounts.length ? "Cadastre uma conta primeiro" : "Resgatar para uma conta"}>
+                  <ArrowRightLeft className="mr-1 h-3.5 w-3.5" />Resgatar
+                </Button>
                 <button onClick={() => { setEditing(i); setOpen(true); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"><Pencil className="h-4 w-4" /></button>
                 <button onClick={() => setConfirmId(i.id)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
               </div>
@@ -1477,7 +1588,13 @@ function PlanningTab({
           <div className="space-y-3">
             <div><Label>Descrição</Label><Input value={incForm.description} onChange={e => setIncForm({ ...incForm, description: e.target.value })} placeholder="Salário, VR, freelance…" /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Categoria</Label><Input value={incForm.category ?? ""} onChange={e => setIncForm({ ...incForm, category: e.target.value })} placeholder="salário, benefício…" /></div>
+              <div>
+                <Label>Categoria</Label>
+                <Input list="income-cat-suggestions" value={incForm.category ?? ""} onChange={e => setIncForm({ ...incForm, category: e.target.value })} placeholder="Salário, Benefício…" />
+                <datalist id="income-cat-suggestions">
+                  {INCOME_CAT_SUGGESTIONS.map(c => <option key={c} value={c} />)}
+                </datalist>
+              </div>
               <div><Label>Valor previsto</Label><Input type="number" step="0.01" value={incForm.amount} onChange={e => setIncForm({ ...incForm, amount: +e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -1507,18 +1624,25 @@ function PlanningTab({
           <DialogHeader><DialogTitle className="font-display">Novo item no plano</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label>Tipo</Label>
+              <Label>Tipo da categoria</Label>
               <div className="grid grid-cols-4 gap-2">
                 {(["category", "card", "reserve", "investment"] as BudgetKind[]).map(k => (
                   <button key={k} type="button" onClick={() => setBForm({ ...bForm, kind: k, category: "", ref_id: "" })}
                     className={`rounded-full px-3 py-2 text-xs capitalize ${bForm.kind === k ? "bg-primary text-primary-foreground" : "bg-accent"}`}>
-                    {k === "category" ? "Categoria" : k === "card" ? "Cartão" : k === "reserve" ? "Reserva" : "Investimento"}
+                    {k === "category" ? "Despesa" : k === "card" ? "Cartão" : k === "reserve" ? "Reserva" : "Investimento"}
                   </button>
                 ))}
               </div>
+              <p className="mt-1 text-xs text-muted-foreground">O item será agrupado automaticamente na seção correspondente.</p>
             </div>
             {bForm.kind === "category" && (
-              <div><Label>Categoria</Label><Input value={bForm.category} onChange={e => setBForm({ ...bForm, category: e.target.value })} placeholder="mercado, lazer, pets…" /></div>
+              <div>
+                <Label>Categoria de despesa</Label>
+                <Input list="budget-expense-suggestions" value={bForm.category} onChange={e => setBForm({ ...bForm, category: e.target.value })} placeholder="Mercado, Lazer, Pets…" />
+                <datalist id="budget-expense-suggestions">
+                  {EXPENSE_CAT_SUGGESTIONS.map(c => <option key={c} value={c} />)}
+                </datalist>
+              </div>
             )}
             {bForm.kind === "card" && (
               <div>
