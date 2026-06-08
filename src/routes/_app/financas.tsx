@@ -71,6 +71,23 @@ const EXPENSE_CAT_SUGGESTIONS = ["Mercado", "Restaurante", "Transporte", "Saúde
 const RESERVE_CAT_SUGGESTIONS = ["Emergência", "Viagem", "Casa", "Carro", "Estudos", "Presente"];
 const INVEST_CAT_SUGGESTIONS = ["Tesouro Selic", "Tesouro IPCA", "CDB", "LCI", "LCA", "Fundos", "Ações", "Cripto"];
 
+const DEFAULT_CATEGORIES: { type: CatType; names: string[] }[] = [
+  { type: "receita", names: INCOME_CAT_SUGGESTIONS },
+  { type: "despesa", names: EXPENSE_CAT_SUGGESTIONS },
+  { type: "reserva", names: RESERVE_CAT_SUGGESTIONS },
+  { type: "investimento", names: INVEST_CAT_SUGGESTIONS },
+];
+
+const CAT_TYPE_LABEL: Record<CatType, string> = {
+  receita: "Receita", despesa: "Despesa", reserva: "Reserva", investimento: "Investimento",
+};
+const CAT_TYPE_TINT: Record<CatType, string> = {
+  receita: "bg-emerald-500/15 text-emerald-700",
+  despesa: "bg-rose-500/15 text-rose-700",
+  reserva: "bg-sky-500/15 text-sky-700",
+  investimento: "bg-amber-500/15 text-amber-800",
+};
+
 // Compute per-account balance considering income, expenses (paid only), and transfers
 function balanceFor(account: Account, fins: Fin[], today: string) {
   let bal = Number(account.initial_balance) || 0;
