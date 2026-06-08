@@ -49,6 +49,8 @@ type PlannedIncome = {
   expected_date: string | null; account_id: string | null; received: boolean; notes: string | null;
 };
 type Movement = { id: string; jar_id: string; kind: string; amount: number; date: string };
+export type CatType = "receita" | "despesa" | "reserva" | "investimento";
+type Cat = { id: string; name: string; type: CatType; color: string | null; icon: string | null; archived: boolean };
 
 
 const PAY = ["pix", "débito", "dinheiro", "crédito"];
