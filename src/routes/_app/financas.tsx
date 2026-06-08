@@ -216,11 +216,11 @@ function FinancasPage() {
 
         <TabsContent value="overview"><Overview fins={finList} budgets={budgets ?? []} cards={cards ?? []} accounts={accountList} jars={jars ?? []} invs={invs ?? []} accountsTotal={accountsTotal} totalJars={totalJars} totalInvs={totalInvs} futureCardExpense={futureCardExpense} patrimony={patrimony} today={today} /></TabsContent>
         <TabsContent value="accounts"><AccountsTab accounts={accountList} fins={finList} jars={jars ?? []} today={today} /></TabsContent>
-        <TabsContent value="tx"><Transactions fins={finList} cards={cards ?? []} accounts={accountList} /></TabsContent>
+        <TabsContent value="tx"><Transactions fins={finList} cards={cards ?? []} accounts={accountList} cats={cats ?? []} budgets={budgets ?? []} /></TabsContent>
         <TabsContent value="cards"><CardsTab cards={cards ?? []} fins={finList} accounts={accountList} /></TabsContent>
         <TabsContent value="jars"><Jars jars={jars ?? []} accounts={accountList} /></TabsContent>
         <TabsContent value="invs"><Investments invs={invs ?? []} accounts={accountList} /></TabsContent>
-        <TabsContent value="budget"><PlanningTab budgets={budgets ?? []} fins={finList} accounts={accountList} jars={jars ?? []} invs={invs ?? []} cards={cards ?? []} plannedIncomes={plannedIncomes ?? []} movements={movements ?? []} /></TabsContent>
+        <TabsContent value="budget"><PlanningTab budgets={budgets ?? []} fins={finList} accounts={accountList} jars={jars ?? []} invs={invs ?? []} cards={cards ?? []} plannedIncomes={plannedIncomes ?? []} movements={movements ?? []} cats={cats ?? []} /></TabsContent>
         <TabsContent value="config"><Config settings={settings ?? null} hasAccounts={accountList.length > 0} /></TabsContent>
       </Tabs>
     </div>
