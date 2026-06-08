@@ -1437,6 +1437,7 @@ function PlanningTab({
 
   // ---------- add budget dialog ----------
   const [bOpen, setBOpen] = useState(false);
+  const [catMgrOpen, setCatMgrOpen] = useState(false);
   const [bForm, setBForm] = useState<{ kind: BudgetKind; category: string; ref_id: string; amount: number; label: string }>({ kind: "category", category: "", ref_id: "", amount: 0, label: "" });
   useEffect(() => { if (bOpen) setBForm({ kind: "category", category: "", ref_id: "", amount: 0, label: "" }); }, [bOpen]);
 
