@@ -1716,15 +1716,21 @@ function PlanningTab({
               </div>
               <p className="mt-1 text-xs text-muted-foreground">O item será agrupado automaticamente na seção correspondente.</p>
             </div>
-            {bForm.kind === "category" && (
-              <div>
-                <Label>Categoria de despesa</Label>
-                <Input list="budget-expense-suggestions" value={bForm.category} onChange={e => setBForm({ ...bForm, category: e.target.value })} placeholder="Mercado, Lazer, Pets…" />
-                <datalist id="budget-expense-suggestions">
-                  {EXPENSE_CAT_SUGGESTIONS.map(c => <option key={c} value={c} />)}
-                </datalist>
-              </div>
-            )}
+            {bForm.kind === "category" && (() => {
+              const opts = cats.filter(c => !c.archived && c.type === "despesa");
+              return (
+                <div>
+                  <Label>Categoria de despesa</Label>
+                  <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={bForm.category} onChange={e => setBForm({ ...bForm, category: e.target.value })}>
+                    <option value="">Selecione…</option>
+                    {opts.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  </select>
+                  {!opts.length && (
+                    <button type="button" onClick={() => setCatMgrOpen(true)} className="mt-1 text-xs text-primary underline">Cadastrar categorias de despesa</button>
+                  )}
+                </div>
+              );
+            })()}
             {bForm.kind === "card" && (
               <div>
                 <Label>Cartão</Label>
@@ -1757,6 +1763,8 @@ function PlanningTab({
           </div>
         </DialogContent>
       </Dialog>
+
+      <CategoriesManager open={catMgrOpen} onOpenChange={setCatMgrOpen} cats={cats} />
     </div>
   );
 }
