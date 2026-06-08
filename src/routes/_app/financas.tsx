@@ -146,6 +146,20 @@ function FinancasPage() {
     enabled: !!user, queryKey: ["savings_movements", user?.id],
     queryFn: async () => ((await supabase.from("savings_movements").select("*")).data ?? []) as Movement[],
   });
+  const { data: cats } = useQuery({
+    enabled: !!user, queryKey: ["finance_categories", user?.id],
+    queryFn: async () => (((await (supabase as any).from("finance_categories").select("*").order("name")).data) ?? []) as Cat[],
+  });
+  const qcSeed = useQueryClient();
+  useEffect(() => {
+    if (!user || !cats) return;
+    if (cats.length > 0) return;
+    (async () => {
+      const rows = DEFAULT_CATEGORIES.flatMap(g => g.names.map(n => ({ user_id: user.id, name: n, type: g.type })));
+      await (supabase as any).from("finance_categories").insert(rows);
+      qcSeed.invalidateQueries({ queryKey: ["finance_categories"] });
+    })();
+  }, [user, cats, qcSeed]);
 
 
   // -------- derived totals --------
