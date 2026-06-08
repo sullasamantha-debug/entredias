@@ -1291,10 +1291,10 @@ function Investments({ invs, accounts }: { invs: Inv[]; accounts: Account[] }) {
 type BudgetKind = "category" | "card" | "reserve" | "investment";
 
 function PlanningTab({
-  budgets, fins, accounts, jars, invs, cards, plannedIncomes, movements,
+  budgets, fins, accounts, jars, invs, cards, plannedIncomes, movements, cats,
 }: {
   budgets: Budget[]; fins: Fin[]; accounts: Account[]; jars: Jar[]; invs: Inv[]; cards: Card[];
-  plannedIncomes: PlannedIncome[]; movements: Movement[];
+  plannedIncomes: PlannedIncome[]; movements: Movement[]; cats: Cat[];
 }) {
   const { user } = useAuth();
   const qc = useQueryClient();
