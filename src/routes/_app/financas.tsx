@@ -1807,3 +1807,83 @@ function Config({ settings, hasAccounts }: { settings: Settings | null; hasAccou
     </div>
   );
 }
+
+// ============================================================
+// CATEGORIES MANAGER
+function CategoriesManager({ open, onOpenChange, cats }: { open: boolean; onOpenChange: (v: boolean) => void; cats: Cat[] }) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const [newName, setNewName] = useState("");
+  const [newType, setNewType] = useState<CatType>("despesa");
+  const TYPES: CatType[] = ["receita", "despesa", "reserva", "investimento"];
+
+  const add = async () => {
+    if (!user || !newName.trim()) return;
+    const { error } = await (supabase as any).from("finance_categories").insert({
+      user_id: user.id, name: newName.trim(), type: newType,
+    });
+    if (error) return toast.error(error.message.includes("duplicate") ? "Categoria já existe." : error.message);
+    setNewName("");
+    qc.invalidateQueries({ queryKey: ["finance_categories"] });
+  };
+
+  const remove = async (id: string) => {
+    await (supabase as any).from("finance_categories").delete().eq("id", id);
+    qc.invalidateQueries({ queryKey: ["finance_categories"] });
+  };
+
+  const toggleArchived = async (c: Cat) => {
+    await (supabase as any).from("finance_categories").update({ archived: !c.archived }).eq("id", c.id);
+    qc.invalidateQueries({ queryKey: ["finance_categories"] });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto">
+        <DialogHeader><DialogTitle className="font-display">Categorias financeiras</DialogTitle></DialogHeader>
+        <p className="mb-3 text-sm text-muted-foreground">Estas categorias são usadas em receitas, despesas, orçamento e relatórios — uma única fonte de cadastro.</p>
+
+        <div className="mb-4 rounded-xl border bg-accent/30 p-3">
+          <Label>Nova categoria</Label>
+          <div className="mt-1 grid grid-cols-[1fr_auto_auto] gap-2">
+            <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Ex: Mercado" onKeyDown={(e) => e.key === "Enter" && add()} />
+            <select value={newType} onChange={e => setNewType(e.target.value as CatType)}
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm">
+              {TYPES.map(t => <option key={t} value={t}>{CAT_TYPE_LABEL[t]}</option>)}
+            </select>
+            <Button onClick={add} className="rounded-full">Adicionar</Button>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {TYPES.map(t => {
+            const list = cats.filter(c => c.type === t);
+            return (
+              <div key={t}>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className={`rounded-full px-2 py-0.5 text-xs ${CAT_TYPE_TINT[t]}`}>{CAT_TYPE_LABEL[t]}</span>
+                  <span className="text-xs text-muted-foreground">{list.length} categoria{list.length !== 1 ? "s" : ""}</span>
+                </div>
+                {!list.length ? <p className="text-xs text-muted-foreground">Nenhuma categoria nesse grupo.</p> : (
+                  <div className="flex flex-wrap gap-2">
+                    {list.map(c => (
+                      <div key={c.id} className={`flex items-center gap-2 rounded-full border px-3 py-1 text-sm ${c.archived ? "opacity-50" : ""}`}>
+                        <span>{c.name}</span>
+                        <button onClick={() => toggleArchived(c)} className="text-xs text-muted-foreground hover:text-foreground" title={c.archived ? "Reativar" : "Arquivar"}>
+                          {c.archived ? "↺" : "—"}
+                        </button>
+                        <button onClick={() => remove(c.id)} className="text-xs text-muted-foreground hover:text-destructive">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
