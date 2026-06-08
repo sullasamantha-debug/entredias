@@ -49,6 +49,8 @@ type PlannedIncome = {
   expected_date: string | null; account_id: string | null; received: boolean; notes: string | null;
 };
 type Movement = { id: string; jar_id: string; kind: string; amount: number; date: string };
+export type CatType = "receita" | "despesa" | "reserva" | "investimento";
+type Cat = { id: string; name: string; type: CatType; color: string | null; icon: string | null; archived: boolean };
 
 
 const PAY = ["pix", "débito", "dinheiro", "crédito"];
@@ -68,6 +70,23 @@ const INCOME_CAT_SUGGESTIONS = ["Salário", "Freelance", "Rendimentos", "Reembol
 const EXPENSE_CAT_SUGGESTIONS = ["Mercado", "Restaurante", "Transporte", "Saúde", "Pets", "Educação", "Lazer", "Assinaturas", "Viagem", "Casa", "Contas"];
 const RESERVE_CAT_SUGGESTIONS = ["Emergência", "Viagem", "Casa", "Carro", "Estudos", "Presente"];
 const INVEST_CAT_SUGGESTIONS = ["Tesouro Selic", "Tesouro IPCA", "CDB", "LCI", "LCA", "Fundos", "Ações", "Cripto"];
+
+const DEFAULT_CATEGORIES: { type: CatType; names: string[] }[] = [
+  { type: "receita", names: INCOME_CAT_SUGGESTIONS },
+  { type: "despesa", names: EXPENSE_CAT_SUGGESTIONS },
+  { type: "reserva", names: RESERVE_CAT_SUGGESTIONS },
+  { type: "investimento", names: INVEST_CAT_SUGGESTIONS },
+];
+
+const CAT_TYPE_LABEL: Record<CatType, string> = {
+  receita: "Receita", despesa: "Despesa", reserva: "Reserva", investimento: "Investimento",
+};
+const CAT_TYPE_TINT: Record<CatType, string> = {
+  receita: "bg-emerald-500/15 text-emerald-700",
+  despesa: "bg-rose-500/15 text-rose-700",
+  reserva: "bg-sky-500/15 text-sky-700",
+  investimento: "bg-amber-500/15 text-amber-800",
+};
 
 // Compute per-account balance considering income, expenses (paid only), and transfers
 function balanceFor(account: Account, fins: Fin[], today: string) {
@@ -127,6 +146,20 @@ function FinancasPage() {
     enabled: !!user, queryKey: ["savings_movements", user?.id],
     queryFn: async () => ((await supabase.from("savings_movements").select("*")).data ?? []) as Movement[],
   });
+  const { data: cats } = useQuery({
+    enabled: !!user, queryKey: ["finance_categories", user?.id],
+    queryFn: async () => (((await (supabase as any).from("finance_categories").select("*").order("name")).data) ?? []) as Cat[],
+  });
+  const qcSeed = useQueryClient();
+  useEffect(() => {
+    if (!user || !cats) return;
+    if (cats.length > 0) return;
+    (async () => {
+      const rows = DEFAULT_CATEGORIES.flatMap(g => g.names.map(n => ({ user_id: user.id, name: n, type: g.type })));
+      await (supabase as any).from("finance_categories").insert(rows);
+      qcSeed.invalidateQueries({ queryKey: ["finance_categories"] });
+    })();
+  }, [user, cats, qcSeed]);
 
 
   // -------- derived totals --------
@@ -183,11 +216,11 @@ function FinancasPage() {
 
         <TabsContent value="overview"><Overview fins={finList} budgets={budgets ?? []} cards={cards ?? []} accounts={accountList} jars={jars ?? []} invs={invs ?? []} accountsTotal={accountsTotal} totalJars={totalJars} totalInvs={totalInvs} futureCardExpense={futureCardExpense} patrimony={patrimony} today={today} /></TabsContent>
         <TabsContent value="accounts"><AccountsTab accounts={accountList} fins={finList} jars={jars ?? []} today={today} /></TabsContent>
-        <TabsContent value="tx"><Transactions fins={finList} cards={cards ?? []} accounts={accountList} /></TabsContent>
+        <TabsContent value="tx"><Transactions fins={finList} cards={cards ?? []} accounts={accountList} cats={cats ?? []} budgets={budgets ?? []} /></TabsContent>
         <TabsContent value="cards"><CardsTab cards={cards ?? []} fins={finList} accounts={accountList} /></TabsContent>
         <TabsContent value="jars"><Jars jars={jars ?? []} accounts={accountList} /></TabsContent>
         <TabsContent value="invs"><Investments invs={invs ?? []} accounts={accountList} /></TabsContent>
-        <TabsContent value="budget"><PlanningTab budgets={budgets ?? []} fins={finList} accounts={accountList} jars={jars ?? []} invs={invs ?? []} cards={cards ?? []} plannedIncomes={plannedIncomes ?? []} movements={movements ?? []} /></TabsContent>
+        <TabsContent value="budget"><PlanningTab budgets={budgets ?? []} fins={finList} accounts={accountList} jars={jars ?? []} invs={invs ?? []} cards={cards ?? []} plannedIncomes={plannedIncomes ?? []} movements={movements ?? []} cats={cats ?? []} /></TabsContent>
         <TabsContent value="config"><Config settings={settings ?? null} hasAccounts={accountList.length > 0} /></TabsContent>
       </Tabs>
     </div>
@@ -506,7 +539,7 @@ const emptyTx = () => ({
   card_id: "" as string, account_id: "" as string, to_account_id: "" as string,
 });
 
-function Transactions({ fins, cards, accounts }: { fins: Fin[]; cards: Card[]; accounts: Account[] }) {
+function Transactions({ fins, cards, accounts, cats, budgets }: { fins: Fin[]; cards: Card[]; accounts: Account[]; cats: Cat[]; budgets: Budget[] }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -634,9 +667,20 @@ function Transactions({ fins, cards, accounts }: { fins: Fin[]; cards: Card[]; a
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>Categoria</Label>
-                    <Input list={form.kind === "income" ? "tx-income-cats" : "tx-expense-cats"} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder={form.kind === "income" ? "Salário, Freelance…" : "Mercado, Lazer…"} />
-                    <datalist id="tx-expense-cats">{EXPENSE_CAT_SUGGESTIONS.map(c => <option key={c} value={c} />)}</datalist>
-                    <datalist id="tx-income-cats">{INCOME_CAT_SUGGESTIONS.map(c => <option key={c} value={c} />)}</datalist>
+                    {(() => {
+                      const wantedType: CatType = form.kind === "income" ? "receita" : "despesa";
+                      const opts = cats.filter(c => !c.archived && c.type === wantedType);
+                      return (
+                        <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                          <option value="">Selecione…</option>
+                          {opts.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                        </select>
+                      );
+                    })()}
+                    {!cats.some(c => c.type === (form.kind === "income" ? "receita" : "despesa")) && (
+                      <p className="mt-1 text-xs text-muted-foreground">Cadastre categorias na aba <strong>Planejamento → Categorias</strong>.</p>
+                    )}
                   </div>
                   <div><Label>Forma</Label>
                     <select value={form.payment_method} onChange={e => setForm({ ...form, payment_method: e.target.value, card_id: e.target.value === "crédito" ? form.card_id : "" })}
@@ -645,6 +689,41 @@ function Transactions({ fins, cards, accounts }: { fins: Fin[]; cards: Card[]; a
                     </select>
                   </div>
                 </div>
+                {form.category && (() => {
+                  const mk = monthKey(new Date(form.date + "T00:00"));
+                  const start = `${mk}-01`; const end = `${addMonth(mk, 1)}-01`;
+                  const isIncome = form.kind === "income";
+                  const matches = (name: string | null) => (name ?? "").trim().toLowerCase() === form.category.trim().toLowerCase();
+                  const planned = budgets
+                    .filter(b => b.month === mk && b.kind === "category" && matches(b.category))
+                    .reduce((a, b) => a + Number(b.amount), 0);
+                  const used = fins
+                    .filter(f => f.kind === (isIncome ? "income" : "expense") && f.date >= start && f.date < end && matches(f.category))
+                    .filter(f => editing ? f.id !== editing.id : true)
+                    .reduce((a, f) => a + Number(f.amount), 0);
+                  if (planned <= 0 && used <= 0) return null;
+                  const available = planned - used;
+                  const pct = planned > 0 ? Math.min(100, (used / planned) * 100) : 0;
+                  return (
+                    <div className="rounded-xl border bg-accent/30 p-3 text-sm">
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <span className="font-medium capitalize">{form.category}</span>
+                        <span className="text-xs text-muted-foreground">{labelMonth(mk)}</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div><div className="text-xs text-muted-foreground">Orçado</div><div className="font-medium">{fmtBRL(planned)}</div></div>
+                        <div><div className="text-xs text-muted-foreground">Utilizado</div><div className="font-medium">{fmtBRL(used)}</div></div>
+                        <div><div className="text-xs text-muted-foreground">Disponível</div><div className={`font-medium ${available < 0 ? "text-rose-600" : "text-emerald-700"}`}>{fmtBRL(available)}</div></div>
+                      </div>
+                      {planned > 0 && (
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-background">
+                          <div className={`h-full ${pct >= 100 ? "bg-rose-500" : pct >= 80 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${pct}%` }} />
+                        </div>
+                      )}
+                      {planned <= 0 && <p className="mt-2 text-xs text-muted-foreground">Sem orçamento para esta categoria neste mês.</p>}
+                    </div>
+                  );
+                })()}
                 <div>
                   <Label>Conta</Label>
                   <select value={form.account_id} onChange={e => setForm({ ...form, account_id: e.target.value })}
@@ -1258,10 +1337,10 @@ function Investments({ invs, accounts }: { invs: Inv[]; accounts: Account[] }) {
 type BudgetKind = "category" | "card" | "reserve" | "investment";
 
 function PlanningTab({
-  budgets, fins, accounts, jars, invs, cards, plannedIncomes, movements,
+  budgets, fins, accounts, jars, invs, cards, plannedIncomes, movements, cats,
 }: {
   budgets: Budget[]; fins: Fin[]; accounts: Account[]; jars: Jar[]; invs: Inv[]; cards: Card[];
-  plannedIncomes: PlannedIncome[]; movements: Movement[];
+  plannedIncomes: PlannedIncome[]; movements: Movement[]; cats: Cat[];
 }) {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -1358,6 +1437,7 @@ function PlanningTab({
 
   // ---------- add budget dialog ----------
   const [bOpen, setBOpen] = useState(false);
+  const [catMgrOpen, setCatMgrOpen] = useState(false);
   const [bForm, setBForm] = useState<{ kind: BudgetKind; category: string; ref_id: string; amount: number; label: string }>({ kind: "category", category: "", ref_id: "", amount: 0, label: "" });
   useEffect(() => { if (bOpen) setBForm({ kind: "category", category: "", ref_id: "", amount: 0, label: "" }); }, [bOpen]);
 
@@ -1456,6 +1536,7 @@ function PlanningTab({
           <button onClick={() => setMonth(addMonth(month, 1))} className="rounded-full bg-accent px-3 py-1 text-sm">→</button>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button onClick={() => setCatMgrOpen(true)} variant="outline" className="rounded-full"><Plus className="mr-1 h-4 w-4" />Categorias</Button>
           <Button onClick={() => { setIncEditing(null); setIncOpen(true); }} variant="outline" className="rounded-full"><Plus className="mr-1 h-4 w-4" />Receita prevista</Button>
           <Button onClick={() => setBOpen(true)} className="rounded-full"><Plus className="mr-1 h-4 w-4" />Item no plano</Button>
         </div>
@@ -1635,15 +1716,21 @@ function PlanningTab({
               </div>
               <p className="mt-1 text-xs text-muted-foreground">O item será agrupado automaticamente na seção correspondente.</p>
             </div>
-            {bForm.kind === "category" && (
-              <div>
-                <Label>Categoria de despesa</Label>
-                <Input list="budget-expense-suggestions" value={bForm.category} onChange={e => setBForm({ ...bForm, category: e.target.value })} placeholder="Mercado, Lazer, Pets…" />
-                <datalist id="budget-expense-suggestions">
-                  {EXPENSE_CAT_SUGGESTIONS.map(c => <option key={c} value={c} />)}
-                </datalist>
-              </div>
-            )}
+            {bForm.kind === "category" && (() => {
+              const opts = cats.filter(c => !c.archived && c.type === "despesa");
+              return (
+                <div>
+                  <Label>Categoria de despesa</Label>
+                  <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={bForm.category} onChange={e => setBForm({ ...bForm, category: e.target.value })}>
+                    <option value="">Selecione…</option>
+                    {opts.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  </select>
+                  {!opts.length && (
+                    <button type="button" onClick={() => setCatMgrOpen(true)} className="mt-1 text-xs text-primary underline">Cadastrar categorias de despesa</button>
+                  )}
+                </div>
+              );
+            })()}
             {bForm.kind === "card" && (
               <div>
                 <Label>Cartão</Label>
@@ -1676,6 +1763,8 @@ function PlanningTab({
           </div>
         </DialogContent>
       </Dialog>
+
+      <CategoriesManager open={catMgrOpen} onOpenChange={setCatMgrOpen} cats={cats} />
     </div>
   );
 }
@@ -1716,5 +1805,85 @@ function Config({ settings, hasAccounts }: { settings: Settings | null; hasAccou
         </div>
       </div>
     </div>
+  );
+}
+
+// ============================================================
+// CATEGORIES MANAGER
+function CategoriesManager({ open, onOpenChange, cats }: { open: boolean; onOpenChange: (v: boolean) => void; cats: Cat[] }) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const [newName, setNewName] = useState("");
+  const [newType, setNewType] = useState<CatType>("despesa");
+  const TYPES: CatType[] = ["receita", "despesa", "reserva", "investimento"];
+
+  const add = async () => {
+    if (!user || !newName.trim()) return;
+    const { error } = await (supabase as any).from("finance_categories").insert({
+      user_id: user.id, name: newName.trim(), type: newType,
+    });
+    if (error) return toast.error(error.message.includes("duplicate") ? "Categoria já existe." : error.message);
+    setNewName("");
+    qc.invalidateQueries({ queryKey: ["finance_categories"] });
+  };
+
+  const remove = async (id: string) => {
+    await (supabase as any).from("finance_categories").delete().eq("id", id);
+    qc.invalidateQueries({ queryKey: ["finance_categories"] });
+  };
+
+  const toggleArchived = async (c: Cat) => {
+    await (supabase as any).from("finance_categories").update({ archived: !c.archived }).eq("id", c.id);
+    qc.invalidateQueries({ queryKey: ["finance_categories"] });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto">
+        <DialogHeader><DialogTitle className="font-display">Categorias financeiras</DialogTitle></DialogHeader>
+        <p className="mb-3 text-sm text-muted-foreground">Estas categorias são usadas em receitas, despesas, orçamento e relatórios — uma única fonte de cadastro.</p>
+
+        <div className="mb-4 rounded-xl border bg-accent/30 p-3">
+          <Label>Nova categoria</Label>
+          <div className="mt-1 grid grid-cols-[1fr_auto_auto] gap-2">
+            <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Ex: Mercado" onKeyDown={(e) => e.key === "Enter" && add()} />
+            <select value={newType} onChange={e => setNewType(e.target.value as CatType)}
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm">
+              {TYPES.map(t => <option key={t} value={t}>{CAT_TYPE_LABEL[t]}</option>)}
+            </select>
+            <Button onClick={add} className="rounded-full">Adicionar</Button>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {TYPES.map(t => {
+            const list = cats.filter(c => c.type === t);
+            return (
+              <div key={t}>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className={`rounded-full px-2 py-0.5 text-xs ${CAT_TYPE_TINT[t]}`}>{CAT_TYPE_LABEL[t]}</span>
+                  <span className="text-xs text-muted-foreground">{list.length} categoria{list.length !== 1 ? "s" : ""}</span>
+                </div>
+                {!list.length ? <p className="text-xs text-muted-foreground">Nenhuma categoria nesse grupo.</p> : (
+                  <div className="flex flex-wrap gap-2">
+                    {list.map(c => (
+                      <div key={c.id} className={`flex items-center gap-2 rounded-full border px-3 py-1 text-sm ${c.archived ? "opacity-50" : ""}`}>
+                        <span>{c.name}</span>
+                        <button onClick={() => toggleArchived(c)} className="text-xs text-muted-foreground hover:text-foreground" title={c.archived ? "Reativar" : "Arquivar"}>
+                          {c.archived ? "↺" : "—"}
+                        </button>
+                        <button onClick={() => remove(c.id)} className="text-xs text-muted-foreground hover:text-destructive">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
