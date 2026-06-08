@@ -1535,6 +1535,7 @@ function PlanningTab({
           <button onClick={() => setMonth(addMonth(month, 1))} className="rounded-full bg-accent px-3 py-1 text-sm">→</button>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button onClick={() => setCatMgrOpen(true)} variant="outline" className="rounded-full"><Plus className="mr-1 h-4 w-4" />Categorias</Button>
           <Button onClick={() => { setIncEditing(null); setIncOpen(true); }} variant="outline" className="rounded-full"><Plus className="mr-1 h-4 w-4" />Receita prevista</Button>
           <Button onClick={() => setBOpen(true)} className="rounded-full"><Plus className="mr-1 h-4 w-4" />Item no plano</Button>
         </div>
