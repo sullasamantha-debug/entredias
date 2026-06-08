@@ -667,9 +667,20 @@ function Transactions({ fins, cards, accounts, cats, budgets }: { fins: Fin[]; c
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>Categoria</Label>
-                    <Input list={form.kind === "income" ? "tx-income-cats" : "tx-expense-cats"} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder={form.kind === "income" ? "Salário, Freelance…" : "Mercado, Lazer…"} />
-                    <datalist id="tx-expense-cats">{EXPENSE_CAT_SUGGESTIONS.map(c => <option key={c} value={c} />)}</datalist>
-                    <datalist id="tx-income-cats">{INCOME_CAT_SUGGESTIONS.map(c => <option key={c} value={c} />)}</datalist>
+                    {(() => {
+                      const wantedType: CatType = form.kind === "income" ? "receita" : "despesa";
+                      const opts = cats.filter(c => !c.archived && c.type === wantedType);
+                      return (
+                        <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                          <option value="">Selecione…</option>
+                          {opts.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                        </select>
+                      );
+                    })()}
+                    {!cats.some(c => c.type === (form.kind === "income" ? "receita" : "despesa")) && (
+                      <p className="mt-1 text-xs text-muted-foreground">Cadastre categorias na aba <strong>Planejamento → Categorias</strong>.</p>
+                    )}
                   </div>
                   <div><Label>Forma</Label>
                     <select value={form.payment_method} onChange={e => setForm({ ...form, payment_method: e.target.value, card_id: e.target.value === "crédito" ? form.card_id : "" })}
@@ -678,6 +689,41 @@ function Transactions({ fins, cards, accounts, cats, budgets }: { fins: Fin[]; c
                     </select>
                   </div>
                 </div>
+                {form.category && (() => {
+                  const mk = monthKey(new Date(form.date + "T00:00"));
+                  const start = `${mk}-01`; const end = `${addMonth(mk, 1)}-01`;
+                  const isIncome = form.kind === "income";
+                  const matches = (name: string | null) => (name ?? "").trim().toLowerCase() === form.category.trim().toLowerCase();
+                  const planned = budgets
+                    .filter(b => b.month === mk && b.kind === "category" && matches(b.category))
+                    .reduce((a, b) => a + Number(b.amount), 0);
+                  const used = fins
+                    .filter(f => f.kind === (isIncome ? "income" : "expense") && f.date >= start && f.date < end && matches(f.category))
+                    .filter(f => editing ? f.id !== editing.id : true)
+                    .reduce((a, f) => a + Number(f.amount), 0);
+                  if (planned <= 0 && used <= 0) return null;
+                  const available = planned - used;
+                  const pct = planned > 0 ? Math.min(100, (used / planned) * 100) : 0;
+                  return (
+                    <div className="rounded-xl border bg-accent/30 p-3 text-sm">
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <span className="font-medium capitalize">{form.category}</span>
+                        <span className="text-xs text-muted-foreground">{labelMonth(mk)}</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div><div className="text-xs text-muted-foreground">Orçado</div><div className="font-medium">{fmtBRL(planned)}</div></div>
+                        <div><div className="text-xs text-muted-foreground">Utilizado</div><div className="font-medium">{fmtBRL(used)}</div></div>
+                        <div><div className="text-xs text-muted-foreground">Disponível</div><div className={`font-medium ${available < 0 ? "text-rose-600" : "text-emerald-700"}`}>{fmtBRL(available)}</div></div>
+                      </div>
+                      {planned > 0 && (
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-background">
+                          <div className={`h-full ${pct >= 100 ? "bg-rose-500" : pct >= 80 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${pct}%` }} />
+                        </div>
+                      )}
+                      {planned <= 0 && <p className="mt-2 text-xs text-muted-foreground">Sem orçamento para esta categoria neste mês.</p>}
+                    </div>
+                  );
+                })()}
                 <div>
                   <Label>Conta</Label>
                   <select value={form.account_id} onChange={e => setForm({ ...form, account_id: e.target.value })}
