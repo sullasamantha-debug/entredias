@@ -53,7 +53,28 @@ function LoginPage() {
         navigate({ to: "/dashboard" });
       }
     } catch (err) {
-      toast.error((err as Error).message);
+      const e = err as Error & { name?: string; status?: number };
+      console.error("[auth] login error:", e);
+      const msg = e?.message ?? "";
+      const isFetchFail =
+        msg === "Failed to fetch" ||
+        msg.toLowerCase().includes("failed to fetch") ||
+        e?.name === "AuthRetryableFetchError" ||
+        e?.name === "TypeError";
+
+      if (isFetchFail) {
+        toast.error(
+          "Não foi possível conectar ao servidor de autenticação. Se você está no preview, tente novamente ou acesse pelo domínio publicado (entredias.lovable.app)."
+        );
+      } else if (msg.includes("Invalid login credentials")) {
+        toast.error("Email ou senha incorretos.");
+      } else if (msg.includes("Email not confirmed")) {
+        toast.error("Confirme seu email antes de entrar.");
+      } else if (msg.includes("User already registered")) {
+        toast.error("Este email já está cadastrado. Faça login.");
+      } else {
+        toast.error(msg || "Não foi possível completar a ação. Tente novamente.");
+      }
     } finally {
       setLoading(false);
     }

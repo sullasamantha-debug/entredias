@@ -1,51 +1,38 @@
-# Plano — Finanças pessoais completas
+## Contexto
 
-Reformular `/financas` em um hub financeiro pessoal com múltiplas seções, mantendo o visual cozy/clean já usado nos demais módulos.
+O erro **"Failed to fetch"** no login é causado pelo proxy de fetch do **ambiente Preview da Lovable** (`lovable.js`), que intercepta a requisição `POST /auth/v1/token?grant_type=password` do Supabase Auth e a quebra. Não é um bug do código, do Supabase, do CORS, nem das variáveis de ambiente.
 
-## Backend (uma migration)
+**Provas:**
+- Logs de auth do Supabase mostram logins 200 OK para o usuário (`sullasamantha@gmail.com`, 2026-06-08 10:11:41).
+- `.env` tem `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` corretos.
+- Cliente em `src/integrations/supabase/client.ts` é o auto-gerado padrão.
+- Login não usa server functions nem rotas customizadas → não há superfície para erro de CORS do nosso lado.
 
-Novas tabelas (todas com RLS `auth.uid() = user_id` + GRANTs):
+**Validação:** o login funciona normalmente em https://entredias.lovable.app/login (URL publicada, sem proxy).
 
-- `finance_settings` — `user_id` (unique), `initial_balance` numeric
-- `savings_jars` — nome, valor_atual, meta, cor, icone, observacoes
-- `savings_movements` — jar_id, kind (`deposit`/`withdraw`/`transfer_in`/`transfer_out`), amount, date, notes
-- `investments` — nome, categoria (tesouro/cdb/poupanca/outros), invested, current, notes
-- `credit_cards` — nome, limite, dia_fechamento, dia_vencimento, cor
-- `budgets` — month (`YYYY-MM`), category (null = total), amount
+Como não dá para "consertar" o proxy do preview pelo código, o plano foca em **melhorar a experiência de erro** para o usuário entender o que aconteceu quando rodar no preview.
 
-Alterar `finances`:
-- adicionar `card_id uuid null` (referência lógica a `credit_cards.id`)
-- adicionar `paid boolean default true` (faturas pagas viram saída real)
-- adicionar `invoice_month text null` (`YYYY-MM` calculado para gastos no crédito)
+## Mudanças
 
-## Frontend
+### 1. `src/routes/login.tsx` — tratamento de erro melhorado
 
-Reescrever `src/routes/_app/financas.tsx` como página com **tabs**:
+No `catch` do `handle()`:
 
-1. **Visão geral** — Patrimônio total (saldo + cofrinhos + investimentos), entradas/saídas do mês, gastos futuros no crédito, evolução, insights automáticos, gastos por categoria.
-2. **Transações** — lista atual, com filtro entrada/saída/crédito, edição/exclusão. Novo registro permite marcar como crédito (escolhe cartão → calcula `invoice_month` pela regra de fechamento).
-3. **Cartões** — cards de crédito com limite usado, fatura atual, próxima fatura, dias até vencer, botão "Pagar fatura" (marca itens `paid=true` e cria saída no mês de pagamento), gastos por categoria do cartão.
-4. **Cofrinhos** — grid de cards com progresso até a meta, ações depositar/retirar/transferir.
-5. **Investimentos** — lista com valor investido vs atual, rentabilidade %, agrupado por categoria.
-6. **Orçamento** — definir orçamento total e por categoria do mês, com barras de progresso (verde/amarelo/vermelho) e alertas visuais.
-7. **Configurações** — saldo inicial editável.
+- Detectar `TypeError: Failed to fetch` / `err.message === "Failed to fetch"` / `err.name === "AuthRetryableFetchError"`.
+- Quando detectado, mostrar toast com mensagem clara:
+  > "Não foi possível conectar ao servidor de autenticação. Se você está no preview do Lovable, tente novamente ou acesse pelo domínio publicado."
+- Para erros conhecidos do Supabase (credenciais inválidas, email não confirmado), traduzir para PT-BR.
+- Demais erros: continuar mostrando `err.message`.
+- Logar o erro completo no `console.error` para debug.
 
-## Regras de cálculo
+### 2. Sem outras mudanças
 
-- **Saldo atual** = saldo inicial + entradas (date ≤ hoje) − saídas pagas (`paid=true` e date ≤ hoje, ou débito/pix sem cartão).
-- **Gastos futuros no crédito** = soma de `finances` com `card_id` not null e `paid=false`.
-- **Patrimônio total** = saldo atual + Σ cofrinhos + Σ investimentos (valor atual).
-- **Fatura do cartão**: compra com `date <= dia_fechamento` do mês → fatura do mês atual; senão → próximo mês. Calculado no client ao salvar.
-- **Insights**: gerados client-side comparando orçamento vs gasto, patrimônio mês atual vs anterior, próximo vencimento.
+- Não mexer em `client.ts` (auto-gerado).
+- Não alterar `.env`.
+- Não adicionar nenhum override de `window.fetch`.
+- Não tocar em CORS / configuração do Supabase.
 
-## Visual
+## Resultado esperado
 
-Manter `PageHeader`, `StatCard`, `cozy-card`, `TagBadges`. Usar Tabs do shadcn. Barras de progresso para cofrinhos/orçamento. Sem dependências novas.
-
-## Arquivos
-
-- `supabase/migrations/<timestamp>.sql` — novas tabelas, GRANTs, RLS, alterações em `finances`.
-- `src/routes/_app/financas.tsx` — reescrita completa em tabs.
-- (talvez) `src/lib/finance.ts` — helpers de cálculo de fatura e saldo.
-
-Sem alterações em outros módulos.
+- Em produção (`entredias.lovable.app`): login continua funcionando normalmente (já funciona).
+- No preview: se o proxy quebrar a requisição, o usuário vê uma mensagem clara explicando a causa, em vez de "Failed to fetch".
