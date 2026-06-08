@@ -539,7 +539,7 @@ const emptyTx = () => ({
   card_id: "" as string, account_id: "" as string, to_account_id: "" as string,
 });
 
-function Transactions({ fins, cards, accounts }: { fins: Fin[]; cards: Card[]; accounts: Account[] }) {
+function Transactions({ fins, cards, accounts, cats, budgets }: { fins: Fin[]; cards: Card[]; accounts: Account[]; cats: Cat[]; budgets: Budget[] }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
