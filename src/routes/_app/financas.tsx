@@ -1767,40 +1767,70 @@ function PlanningTab({
 
 
 // ============================================================
-// CONFIG
-function Config({ settings, hasAccounts }: { settings: Settings | null; hasAccounts: boolean }) {
-  const { user } = useAuth();
-  const qc = useQueryClient();
-  const [val, setVal] = useState<number>(Number(settings?.initial_balance ?? 0));
-
-  useEffect(() => { setVal(Number(settings?.initial_balance ?? 0)); }, [settings]);
-
-  const save = async () => {
-    if (!user) return;
-    const payload = { user_id: user.id, initial_balance: val, updated_at: new Date().toISOString() };
-    const { error } = settings
-      ? await supabase.from("finance_settings").update(payload).eq("id", settings.id)
-      : await supabase.from("finance_settings").insert(payload);
-    if (error) return toast.error(error.message);
-    toast.success("Saldo inicial salvo.");
-    qc.invalidateQueries({ queryKey: ["finance_settings"] });
-  };
-
+// PATRIMONY AUDIT MODAL
+function PatrimonyAudit({ accounts, fins, invs, jars, accountsTotal, totalInvs, totalJars, futureCardExpense, patrimony, today }:
+  { accounts: Account[]; fins: Fin[]; invs: Inv[]; jars: Jar[]; accountsTotal: number; totalInvs: number; totalJars: number; futureCardExpense: number; patrimony: number; today: string }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="max-w-md">
-      <div className="cozy-card p-5">
-        <div className="mb-3 flex items-center gap-2 font-display text-lg"><Settings className="h-4 w-4 text-primary" />Saldo inicial geral</div>
-        <p className="mb-3 text-sm text-muted-foreground">
-          {hasAccounts
-            ? "Você já cadastrou contas — o saldo é calculado por elas. Este valor fica apenas como referência."
-            : "Quanto você tem hoje em conta. Usado como base enquanto você não cadastra contas individuais."}
-        </p>
-        <div className="flex gap-2">
-          <Input type="number" step="0.01" value={val} onChange={e => setVal(+e.target.value)} />
-          <Button onClick={save} className="rounded-full">Salvar</Button>
-        </div>
-      </div>
-    </div>
+    <>
+      <Button variant="outline" size="sm" className="rounded-full" onClick={() => setOpen(true)}>
+        <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Como o patrimônio foi calculado?
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+          <DialogHeader><DialogTitle>Como foi calculado seu patrimônio</DialogTitle></DialogHeader>
+          <div className="space-y-5 text-sm">
+            <p className="text-muted-foreground">Seu patrimônio soma o saldo real de todas as contas com o valor investido. Reservas não somam — elas apenas separam parte do saldo das contas.</p>
+
+            <section className="cozy-card p-4">
+              <div className="mb-2 flex items-center justify-between font-display text-base"><span className="flex items-center gap-2"><Wallet className="h-4 w-4 text-primary" /> Saldo em contas</span><span>{fmtBRL(accountsTotal)}</span></div>
+              {accounts.length ? (
+                <ul className="space-y-1">
+                  {accounts.map(ac => {
+                    const bal = balanceFor(ac, fins, today);
+                    return (<li key={ac.id} className="flex justify-between text-muted-foreground"><span>{ac.name}<span className="ml-2 text-xs">(inicial {fmtBRL(Number(ac.initial_balance))})</span></span><span className="font-medium text-foreground">{fmtBRL(bal)}</span></li>);
+                  })}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground">Sem contas cadastradas — o saldo aqui é derivado das receitas menos despesas pagas.</p>
+              )}
+              <p className="mt-2 text-xs text-muted-foreground">Cada saldo = saldo inicial + receitas recebidas − despesas pagas + transferências recebidas − transferências enviadas.</p>
+            </section>
+
+            <section className="cozy-card p-4">
+              <div className="mb-2 flex items-center justify-between font-display text-base"><span className="flex items-center gap-2"><LineChart className="h-4 w-4 text-primary" /> Investimentos</span><span>{fmtBRL(totalInvs)}</span></div>
+              {invs.length ? (
+                <ul className="space-y-1">
+                  {invs.map(i => (<li key={i.id} className="flex justify-between text-muted-foreground"><span>{i.name}</span><span className="font-medium text-foreground">{fmtBRL(Number(i.current_amount))}</span></li>))}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground">Sem investimentos cadastrados.</p>
+              )}
+            </section>
+
+            <section className="cozy-card p-4">
+              <div className="mb-2 flex items-center justify-between font-display text-base"><span className="flex items-center gap-2"><PiggyBank className="h-4 w-4 text-primary" /> Reservas (não somam ao patrimônio)</span><span>{fmtBRL(totalJars)}</span></div>
+              {jars.length ? (
+                <ul className="space-y-1">
+                  {jars.map(j => (<li key={j.id} className="flex justify-between text-muted-foreground"><span>{j.name}</span><span className="font-medium text-foreground">{fmtBRL(Number(j.current_amount))}</span></li>))}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground">Sem reservas cadastradas.</p>
+              )}
+              <p className="mt-2 text-xs text-muted-foreground">Reservas são recortes do dinheiro que já está nas contas — por isso não são somadas de novo.</p>
+            </section>
+
+            <section className="cozy-card p-4">
+              <div className="flex items-center justify-between font-display text-base"><span>Total</span><span>{fmtBRL(patrimony)}</span></div>
+              <p className="mt-1 text-xs text-muted-foreground">{fmtBRL(accountsTotal)} (contas) + {fmtBRL(totalInvs)} (investimentos) = {fmtBRL(patrimony)}</p>
+              {futureCardExpense > 0 && (
+                <p className="mt-2 text-xs text-amber-700">Atenção: existem {fmtBRL(futureCardExpense)} em despesas de cartão ainda não pagas. Elas reduzirão o saldo quando a fatura for quitada, mas ainda não foram descontadas do patrimônio.</p>
+              )}
+            </section>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
