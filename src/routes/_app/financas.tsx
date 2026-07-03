@@ -114,10 +114,6 @@ function FinancasPage() {
     enabled: !!user, queryKey: ["finances", user?.id],
     queryFn: async () => ((await supabase.from("finances").select("*").order("date", { ascending: false })).data ?? []) as Fin[],
   });
-  const { data: settings } = useQuery({
-    enabled: !!user, queryKey: ["finance_settings", user?.id],
-    queryFn: async () => ((await supabase.from("finance_settings").select("*").eq("user_id", user!.id).maybeSingle()).data) as Settings | null,
-  });
   const { data: accounts } = useQuery({
     enabled: !!user, queryKey: ["accounts", user?.id],
     queryFn: async () => ((await supabase.from("accounts").select("*").order("created_at")).data ?? []) as Account[],
