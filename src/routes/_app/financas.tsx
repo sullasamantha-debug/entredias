@@ -764,13 +764,18 @@ function Transactions({ fins, cards, accounts, cats, budgets }: { fins: Fin[]; c
                   {isTransfer ? <ArrowRightLeft className="h-4 w-4" /> : x.kind === "income" ? <TrendingUp className="h-4 w-4" /> : isCredit ? <CreditCard className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="font-medium">{x.description || (isTransfer ? `${from ?? "?"} → ${to ?? "?"}` : x.category || "Registro")}</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{x.description || (isTransfer ? `${from ?? "?"} → ${to ?? "?"}` : x.category || "Registro")}</span>
+                    {isTransfer && x.category === "transferência patrimonial" && (
+                      <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-medium text-sky-700">Transferência patrimonial</span>
+                    )}
+                  </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <span>{formatDateBR(x.date)}</span>
                     {!isTransfer && x.category && <span>· {x.category}</span>}
                     {!isTransfer && x.payment_method && <span>· {x.payment_method}</span>}
                     {!isTransfer && from && <span>· {from}</span>}
-                    {isTransfer && <span>· {from ?? "?"} → {to ?? "?"}</span>}
+                    {isTransfer && <span>· {from ? `${from} → ` : ""}{to ?? "?"}</span>}
                     {card && <span>· {card.name}</span>}
                     {isCredit && !x.paid && x.invoice_month && <span className="rounded-full bg-amber-200/60 px-2 text-[10px] text-amber-900">fatura {labelMonth(x.invoice_month)}</span>}
                   </div>
