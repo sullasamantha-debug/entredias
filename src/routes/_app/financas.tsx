@@ -160,7 +160,6 @@ function FinancasPage() {
 
   // -------- derived totals --------
   const today = localDateKey();
-  const fallback = Number(settings?.initial_balance ?? 0);
   const accountList = accounts ?? [];
   const finList = fins ?? [];
 
@@ -169,7 +168,7 @@ function FinancasPage() {
     : (() => {
         const income = finList.filter(f => f.kind === "income" && f.date <= today).reduce((a, f) => a + Number(f.amount), 0);
         const realExpense = finList.filter(f => f.kind === "expense" && f.paid && f.date <= today).reduce((a, f) => a + Number(f.amount), 0);
-        return fallback + income - realExpense;
+        return income - realExpense;
       })();
 
   const futureCardExpense = finList.filter(f => f.kind === "expense" && !f.paid && f.card_id).reduce((a, f) => a + Number(f.amount), 0);
