@@ -202,7 +202,6 @@ function FinancasPage() {
               ["jars", "Reservas"],
               ["invs", "Investimentos"],
               ["budget", "Planejamento"],
-              ["config", "Configurações"],
             ].map(([v, l]) => (
               <TabsTrigger key={v} value={v} className="shrink-0 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{l}</TabsTrigger>
             ))}
@@ -216,7 +215,6 @@ function FinancasPage() {
         <TabsContent value="jars"><Jars jars={jars ?? []} accounts={accountList} /></TabsContent>
         <TabsContent value="invs"><Investments invs={invs ?? []} accounts={accountList} /></TabsContent>
         <TabsContent value="budget"><PlanningTab budgets={budgets ?? []} fins={finList} accounts={accountList} jars={jars ?? []} invs={invs ?? []} cards={cards ?? []} plannedIncomes={plannedIncomes ?? []} movements={movements ?? []} cats={cats ?? []} /></TabsContent>
-        <TabsContent value="config"><Config settings={settings ?? null} hasAccounts={accountList.length > 0} /></TabsContent>
       </Tabs>
     </div>
   );
