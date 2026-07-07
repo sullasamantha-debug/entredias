@@ -525,6 +525,7 @@ function AccountsTab({ accounts, fins, jars, today, cats }: { accounts: Account[
       )}
       <ConfirmDialog open={!!confirmId} onOpenChange={(o) => !o && setConfirmId(null)} onConfirm={remove}
         title="Excluir conta?" description="As transações associadas continuarão registradas, mas ficarão sem conta vinculada." />
+      <OFXImportsHistory accounts={accounts} />
     </div>
   );
 }
