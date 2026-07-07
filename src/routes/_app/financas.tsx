@@ -488,6 +488,7 @@ function AccountsTab({ accounts, fins, jars, today, cats }: { accounts: Account[
                     </div>
                   </div>
                   <div className="flex gap-1">
+                    <OFXImportButton account={ac} accounts={accounts} cats={cats} />
                     <button onClick={() => { setEditing(ac); setOpen(true); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"><Pencil className="h-4 w-4" /></button>
                     <button onClick={() => setConfirmId(ac.id)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
                   </div>
