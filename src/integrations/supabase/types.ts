@@ -362,11 +362,13 @@ export type Database = {
           created_at: string
           date: string
           description: string | null
+          fitid: string | null
           id: string
           installments: number | null
           invoice_month: string | null
           kind: string
           notes: string | null
+          ofx_import_id: string | null
           paid: boolean
           payment_method: string | null
           tags: string[] | null
@@ -381,11 +383,13 @@ export type Database = {
           created_at?: string
           date?: string
           description?: string | null
+          fitid?: string | null
           id?: string
           installments?: number | null
           invoice_month?: string | null
           kind?: string
           notes?: string | null
+          ofx_import_id?: string | null
           paid?: boolean
           payment_method?: string | null
           tags?: string[] | null
@@ -400,11 +404,13 @@ export type Database = {
           created_at?: string
           date?: string
           description?: string | null
+          fitid?: string | null
           id?: string
           installments?: number | null
           invoice_month?: string | null
           kind?: string
           notes?: string | null
+          ofx_import_id?: string | null
           paid?: boolean
           payment_method?: string | null
           tags?: string[] | null
@@ -591,6 +597,86 @@ export type Database = {
           watched_date?: string | null
         }
         Relationships: []
+      }
+      ofx_category_rules: {
+        Row: {
+          cat_type: string
+          category: string
+          created_at: string
+          hits: number
+          id: string
+          pattern: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cat_type?: string
+          category: string
+          created_at?: string
+          hits?: number
+          id?: string
+          pattern: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cat_type?: string
+          category?: string
+          created_at?: string
+          hits?: number
+          id?: string
+          pattern?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ofx_imports: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          duplicate_count: number
+          file_name: string | null
+          id: string
+          imported_count: number
+          period_end: string | null
+          period_start: string | null
+          skipped_count: number
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          duplicate_count?: number
+          file_name?: string | null
+          id?: string
+          imported_count?: number
+          period_end?: string | null
+          period_start?: string | null
+          skipped_count?: number
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          duplicate_count?: number
+          file_name?: string | null
+          id?: string
+          imported_count?: number
+          period_end?: string | null
+          period_start?: string | null
+          skipped_count?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ofx_imports_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       planned_incomes: {
         Row: {
