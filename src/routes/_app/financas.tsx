@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { formatDateBR, localDateKey } from "@/lib/dates";
 import { fmtBRL, monthKey, addMonth, labelMonth, invoiceMonthFor, dueDateOf, daysUntil } from "@/lib/finance";
+import { OFXImportButton, OFXImportsHistory } from "@/components/OFXImport";
 
 export const Route = createFileRoute("/_app/financas")({ component: FinancasPage });
 
