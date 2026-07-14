@@ -1,0 +1,2 @@
+ALTER TABLE public.ofx_imports ADD COLUMN IF NOT EXISTS card_id uuid REFERENCES public.credit_cards(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_finances_fitid_card ON public.finances (user_id, card_id, fitid) WHERE fitid IS NOT NULL AND card_id IS NOT NULL;

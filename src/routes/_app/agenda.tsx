@@ -76,7 +76,10 @@ function AgendaPage() {
     return eachDayOfInterval({ start, end });
   }, [cursor]);
 
-  const selectedEvents = (events ?? []).filter((e) => selected && isSameDay(parseDateOnly(e.date), selected));
+  const activeEvents = (events ?? []).filter((e) => !e.completed);
+  const completedEvents = (events ?? []).filter((e) => e.completed).sort((a, b) => (a.date < b.date ? 1 : -1));
+  const selectedEvents = activeEvents.filter((e) => selected && isSameDay(parseDateOnly(e.date), selected));
+  const [showDone, setShowDone] = useState(false);
 
   return (
     <div>
@@ -119,7 +122,7 @@ function AgendaPage() {
         <div className="mt-1 grid grid-cols-7 gap-1">
           {grid.map((d) => {
             const k = localDateKey(d);
-            const dayEvents = (events ?? []).filter((e) => e.date === k);
+            const dayEvents = activeEvents.filter((e) => e.date === k);
             const isThisMonth = isSameMonth(d, cursor);
             const isToday = isSameDay(d, new Date());
             const isSel = selected && isSameDay(d, selected);
@@ -148,11 +151,11 @@ function AgendaPage() {
         <h3 className="mb-3 font-display text-lg">
           {selected ? format(selected, "EEEE, d 'de' MMMM", { locale: ptBR }) : "Próximos itens"}
         </h3>
-        {(selected ? selectedEvents : (events ?? [])).length === 0 ? (
+        {(selected ? selectedEvents : activeEvents).length === 0 ? (
           <EmptyState title="Nada por aqui ainda" />
         ) : (
           <div className="space-y-2">
-            {(selected ? selectedEvents : (events ?? [])).slice(0, 20).map((e) => (
+            {(selected ? selectedEvents : activeEvents).slice(0, 20).map((e) => (
               <div key={e.id} className="cozy-card flex items-center gap-3 p-3">
                 <button onClick={() => toggleDone(e.id, e.completed)} className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 ${e.completed ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>
                   {e.completed && <Check className="h-3 w-3" />}
@@ -170,6 +173,33 @@ function AgendaPage() {
           </div>
         )}
       </div>
+
+      {completedEvents.length > 0 && (
+        <div className="mt-8">
+          <button onClick={() => setShowDone(v => !v)} className="mb-3 flex items-center gap-2 font-display text-lg text-muted-foreground hover:text-foreground">
+            <Check className="h-4 w-4" /> Eventos concluídos ({completedEvents.length}) {showDone ? "▾" : "▸"}
+          </button>
+          {showDone && (
+            <div className="space-y-2">
+              {completedEvents.slice(0, 50).map((e) => (
+                <div key={e.id} className="cozy-card flex items-center gap-3 p-3 opacity-75">
+                  <button onClick={() => toggleDone(e.id, e.completed)} className="grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 border-primary bg-primary text-primary-foreground" title="Reabrir">
+                    <Check className="h-3 w-3" />
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium line-through text-muted-foreground">{e.title}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Concluído em {formatDateBR(e.date)} {e.time_str ? `· ${e.time_str}` : ""} · {e.type}
+                    </div>
+                  </div>
+                  <button onClick={() => { setEditing(e); setOpen(true); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"><Pencil className="h-4 w-4" /></button>
+                  <button onClick={() => setConfirmId(e.id)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <ConfirmDialog open={!!confirmId} onOpenChange={(o) => !o && setConfirmId(null)} onConfirm={remove} title="Excluir item?" />
     </div>

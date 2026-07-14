@@ -21,7 +21,7 @@ import {
 import { toast } from "sonner";
 import { formatDateBR, localDateKey } from "@/lib/dates";
 import { fmtBRL, monthKey, addMonth, labelMonth, invoiceMonthFor, dueDateOf, daysUntil } from "@/lib/finance";
-import { OFXImportButton, OFXImportsHistory } from "@/components/OFXImport";
+import { OFXImportButton, OFXImportsHistory, OFXCardImportButton } from "@/components/OFXImport";
 
 export const Route = createFileRoute("/_app/financas")({ component: FinancasPage });
 
@@ -215,7 +215,7 @@ function FinancasPage() {
         <TabsContent value="overview"><Overview fins={finList} budgets={budgets ?? []} cards={cards ?? []} accounts={accountList} jars={jars ?? []} invs={invs ?? []} accountsTotal={accountsTotal} totalJars={totalJars} totalInvs={totalInvs} futureCardExpense={futureCardExpense} patrimony={patrimony} today={today} /></TabsContent>
         <TabsContent value="accounts"><AccountsTab accounts={accountList} fins={finList} jars={jars ?? []} today={today} cats={cats ?? []} /></TabsContent>
         <TabsContent value="tx"><Transactions fins={finList} cards={cards ?? []} accounts={accountList} cats={cats ?? []} budgets={budgets ?? []} /></TabsContent>
-        <TabsContent value="cards"><CardsTab cards={cards ?? []} fins={finList} accounts={accountList} /></TabsContent>
+        <TabsContent value="cards"><CardsTab cards={cards ?? []} fins={finList} accounts={accountList} cats={cats ?? []} /></TabsContent>
         <TabsContent value="jars"><Jars jars={jars ?? []} accounts={accountList} /></TabsContent>
         <TabsContent value="invs"><Investments invs={invs ?? []} accounts={accountList} /></TabsContent>
         <TabsContent value="budget"><PlanningTab budgets={budgets ?? []} fins={finList} accounts={accountList} jars={jars ?? []} invs={invs ?? []} cards={cards ?? []} plannedIncomes={plannedIncomes ?? []} movements={movements ?? []} cats={cats ?? []} /></TabsContent>
@@ -801,7 +801,7 @@ function Transactions({ fins, cards, accounts, cats, budgets }: { fins: Fin[]; c
 
 // ============================================================
 // CARDS
-function CardsTab({ cards, fins, accounts }: { cards: Card[]; fins: Fin[]; accounts: Account[] }) {
+function CardsTab({ cards, fins, accounts, cats }: { cards: Card[]; fins: Fin[]; accounts: Account[]; cats: Cat[] }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -941,6 +941,7 @@ function CardsTab({ cards, fins, accounts }: { cards: Card[]; fins: Fin[]; accou
                     </div>
                   </div>
                   {curTotal > 0 && <Button variant="secondary" onClick={() => { setPayingCard({ card: c, invoice: mk, total: curTotal }); setPayAccount(accounts[0]?.id ?? ""); }} className="w-full rounded-full"><CheckCircle2 className="mr-1 h-4 w-4" />Pagar fatura atual</Button>}
+                  <div className="pt-1"><OFXCardImportButton card={c} cats={cats} /></div>
                 </div>
               </div>
             );
