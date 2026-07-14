@@ -213,7 +213,9 @@ function FinancasPage() {
         </div>
 
         <TabsContent value="overview"><Overview fins={finList} budgets={budgets ?? []} cards={cards ?? []} accounts={accountList} jars={jars ?? []} invs={invs ?? []} accountsTotal={accountsTotal} totalJars={totalJars} totalInvs={totalInvs} futureCardExpense={futureCardExpense} patrimony={patrimony} today={today} /></TabsContent>
-        <TabsContent value="accounts"><AccountsTab accounts={accountList} fins={finList} jars={jars ?? []} today={today} cats={cats ?? []} /></TabsContent>
+        <TabsContent value="accounts"><AccountsTab accounts={accountList} fins={finList} jars={jars ?? []} today={today} cats={cats ?? []} cards={cards ?? []} /></TabsContent>
+        <TabsContent value="budget"></TabsContent>
+        <TabsContent value="cards"><CardsTab cards={cards ?? []} fins={finList} accounts={accountList} cats={cats ?? []} /></TabsContent>
         <TabsContent value="tx"><Transactions fins={finList} cards={cards ?? []} accounts={accountList} cats={cats ?? []} budgets={budgets ?? []} /></TabsContent>
         <TabsContent value="cards"><CardsTab cards={cards ?? []} fins={finList} accounts={accountList} cats={cats} /></TabsContent>
         <TabsContent value="jars"><Jars jars={jars ?? []} accounts={accountList} /></TabsContent>
