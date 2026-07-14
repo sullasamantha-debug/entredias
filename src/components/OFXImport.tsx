@@ -8,9 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Upload, FileText, ArrowRightLeft, PiggyBank, LineChart, X, Undo2 } from "lucide-react";
 import { toast } from "sonner";
-import { fmtBRL } from "@/lib/finance";
+import { fmtBRL, invoiceMonthFor, labelMonth } from "@/lib/finance";
 import { formatDateBR } from "@/lib/dates";
-import { parseOFX, suggestCategory, memoPattern, type OFXTx, type SuggestionRule } from "@/lib/ofx";
+import { parseOFX, suggestCategory, type OFXTx, type SuggestionRule } from "@/lib/ofx";
+import { memoPattern } from "@/lib/ofx";
+import { CreditCard } from "lucide-react";
 
 type Cat = { id: string; name: string; type: "receita" | "despesa" | "reserva" | "investimento"; archived: boolean };
 type Account = { id: string; name: string };
