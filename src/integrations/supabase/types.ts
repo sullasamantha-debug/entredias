@@ -634,6 +634,7 @@ export type Database = {
       ofx_imports: {
         Row: {
           account_id: string | null
+          card_id: string | null
           created_at: string
           duplicate_count: number
           file_name: string | null
@@ -646,6 +647,7 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          card_id?: string | null
           created_at?: string
           duplicate_count?: number
           file_name?: string | null
@@ -658,6 +660,7 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          card_id?: string | null
           created_at?: string
           duplicate_count?: number
           file_name?: string | null
@@ -674,6 +677,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ofx_imports_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
             referencedColumns: ["id"]
           },
         ]
