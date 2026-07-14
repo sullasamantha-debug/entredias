@@ -345,13 +345,13 @@ export function OFXImportButton({ account, accounts, cats }:
 // -----------------------------------------------------------
 // Import history + undo
 type ImportRow = {
-  id: string; account_id: string | null; file_name: string | null;
+  id: string; account_id: string | null; card_id: string | null; file_name: string | null;
   period_start: string | null; period_end: string | null;
   imported_count: number; skipped_count: number; duplicate_count: number;
   created_at: string;
 };
 
-export function OFXImportsHistory({ accounts }: { accounts: Account[] }) {
+export function OFXImportsHistory({ accounts, cards = [] }: { accounts: Account[]; cards?: { id: string; name: string }[] }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -375,6 +375,7 @@ export function OFXImportsHistory({ accounts }: { accounts: Account[] }) {
   if (!list.length) return null;
 
   const accName = (id: string | null) => accounts.find(a => a.id === id)?.name ?? "—";
+  const cardName = (id: string | null) => cards.find(c => c.id === id)?.name ?? "cartão";
 
   return (
     <div className="mt-8 cozy-card p-5">
@@ -387,7 +388,7 @@ export function OFXImportsHistory({ accounts }: { accounts: Account[] }) {
             <div className="min-w-0 flex-1">
               <div className="truncate font-medium">{imp.file_name ?? "(sem nome)"}</div>
               <div className="text-xs text-muted-foreground">
-                {formatDateBR(imp.created_at.slice(0, 10))} · {accName(imp.account_id)}
+                {formatDateBR(imp.created_at.slice(0, 10))} · {imp.card_id ? `💳 ${cardName(imp.card_id)}` : accName(imp.account_id)}
                 {imp.period_start && imp.period_end && ` · ${formatDateBR(imp.period_start)}—${formatDateBR(imp.period_end)}`}
               </div>
             </div>
