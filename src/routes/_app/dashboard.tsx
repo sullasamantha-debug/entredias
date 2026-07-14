@@ -1,16 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { PageHeader, StatCard } from "@/components/cozy";
-import {
-  Activity, BookHeart, Mic, Tv, Film, BookOpen, Calendar, Cake, Sparkles, Heart,
-} from "lucide-react";
-import {
-  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar,
-} from "recharts";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, subDays, isSameDay, differenceInCalendarDays, addYears, isAfter } from "date-fns";
+import { PageHeader } from "@/components/cozy";
+import { Calendar, Cake, Sparkles } from "lucide-react";
+import { format, addYears, isAfter, subDays, differenceInCalendarDays, startOfWeek, endOfWeek, isSameDay, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatDateOnly, localDateKey, parseDateOnly } from "@/lib/dates";
 
@@ -21,96 +17,62 @@ export const Route = createFileRoute("/_app/dashboard")({
 function Dashboard() {
   const { user } = useAuth();
   const today = new Date();
-  const monthStart = format(startOfMonth(today), "yyyy-MM-dd");
-  const monthEnd = format(endOfMonth(today), "yyyy-MM-dd");
+  const currentYear = today.getFullYear();
+  const [year, setYear] = useState(currentYear);
+  const yearStart = `${year}-01-01`;
+  const yearEnd = `${year}-12-31`;
 
   const { data } = useQuery({
     enabled: !!user,
-    queryKey: ["dashboard", user?.id],
+    queryKey: ["dashboard", user?.id, year],
     queryFn: async () => {
-      const [habits, habitLogs, podcasts, movies, series, books, events, birthdays, diary] = await Promise.all([
-        supabase.from("habits").select("*").eq("archived", false),
-        supabase.from("habit_logs").select("*").gte("date", localDateKey(subDays(today, 120))),
-        supabase.from("podcasts").select("*").gte("date", monthStart).lte("date", monthEnd),
-        supabase.from("movies").select("*").gte("watched_date", monthStart).lte("watched_date", monthEnd),
-        supabase.from("series").select("episodes_watched, status"),
-        supabase.from("books").select("status, end_date").eq("status", "concluido"),
-        supabase.from("events").select("*").gte("date", localDateKey(today)).order("date").limit(5),
+      const [episodes, movies, series, books, events, birthdays] = await Promise.all([
+        supabase.from("podcast_episodes").select("id, status, listened_date").eq("status", "listened").gte("listened_date", yearStart).lte("listened_date", yearEnd),
+        supabase.from("movies").select("id, watched_date").gte("watched_date", yearStart).lte("watched_date", yearEnd),
+        supabase.from("series").select("id, status, kind, end_date").eq("status", "finalizada").gte("end_date", yearStart).lte("end_date", yearEnd),
+        supabase.from("books").select("id, status, end_date").eq("status", "concluido").gte("end_date", yearStart).lte("end_date", yearEnd),
+        supabase.from("events").select("*").gte("date", localDateKey(today)).order("date").limit(6),
         supabase.from("birthdays").select("*"),
-        supabase.from("diary_entries").select("date, mood, rating").gte("date", monthStart).lte("date", monthEnd),
       ]);
       return {
-        habits: habits.data ?? [],
-        habitLogs: habitLogs.data ?? [],
-        podcasts: podcasts.data ?? [],
+        episodes: episodes.data ?? [],
         movies: movies.data ?? [],
         series: series.data ?? [],
         books: books.data ?? [],
         events: events.data ?? [],
         birthdays: birthdays.data ?? [],
-        diary: diary.data ?? [],
       };
     },
   });
 
-  const todayStr = localDateKey(today);
-  const habitsToday = data?.habitLogs.filter((l) => l.date === todayStr && l.done).length ?? 0;
-  const totalHabits = data?.habits.length ?? 0;
-  const episodes = data?.series.reduce((sum, s) => sum + (s.episodes_watched ?? 0), 0) ?? 0;
+  const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
 
-  // Streak: count consecutive days from today with at least one habit log
-  const streak = (() => {
-    if (!data) return 0;
-    let s = 0;
-    for (let i = 0; i < 120; i++) {
-      const d = localDateKey(subDays(today, i));
-      if (data.habitLogs.some((l) => l.date === d && l.done)) s++;
-      else if (i > 0) break;
-    }
-    return s;
-  })();
-
-  const avgMood = (() => {
-    const ms = (data?.diary ?? []).filter((d) => d.mood != null);
-    if (!ms.length) return "—";
-    return (ms.reduce((s, d) => s + (d.mood ?? 0), 0) / ms.length).toFixed(1);
-  })();
-
-  // Heatmap last 120 days
-  const days = eachDayOfInterval({ start: subDays(today, 119), end: today });
-  const heat = days.map((d) => {
-    const k = localDateKey(d);
-    const count = data?.habitLogs.filter((l) => l.date === k && l.done).length ?? 0;
-    return { date: k, count };
-  });
-
-  // Monthly chart: habits done per day in current month
-  const monthDays = eachDayOfInterval({ start: startOfMonth(today), end: endOfMonth(today) });
-  const monthChart = monthDays.map((d) => {
-    const k = localDateKey(d);
-    return {
-      day: format(d, "d"),
-      habitos: data?.habitLogs.filter((l) => l.date === k && l.done).length ?? 0,
-    };
-  });
-
-  const mediaChart = [
-    { name: "Pod", v: data?.podcasts.length ?? 0 },
-    { name: "Filmes", v: data?.movies.length ?? 0 },
-    { name: "Eps", v: episodes },
-    { name: "Livros", v: data?.books.length ?? 0 },
+  const cards = [
+    { emoji: "🎧", label: "Podcasts", value: data?.episodes.length ?? 0, unit: "podcasts ouvidos" },
+    { emoji: "🎬", label: "Filmes", value: data?.movies.length ?? 0, unit: "filmes assistidos" },
+    { emoji: "📺", label: "Séries", value: data?.series.length ?? 0, unit: "séries concluídas" },
+    { emoji: "📚", label: "Livros", value: data?.books.length ?? 0, unit: "livros concluídos" },
   ];
 
-  // Next birthdays
-  const upcomingBdays = (data?.birthdays ?? [])
-    .map((b) => {
-      const d = parseDateOnly(b.date);
-      let next = new Date(today.getFullYear(), d.getMonth(), d.getDate());
-      if (!isAfter(next, subDays(today, 1))) next = addYears(next, 1);
-      return { ...b, next, days: differenceInCalendarDays(next, today) };
-    })
-    .sort((a, b) => a.days - b.days)
-    .slice(0, 4);
+  // Birthdays with next occurrence + day metadata
+  const bdays = (data?.birthdays ?? []).map((b) => {
+    const d = parseDateOnly(b.date);
+    let next = new Date(today.getFullYear(), d.getMonth(), d.getDate());
+    if (!isAfter(next, subDays(today, 1))) next = addYears(next, 1);
+    return { ...b, next, days: differenceInCalendarDays(next, today) };
+  }).sort((a, b) => a.days - b.days);
+
+  const weekStart = startOfWeek(today, { weekStartsOn: 0 });
+  const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
+  const monthStart = startOfMonth(today);
+  const monthEnd = endOfMonth(today);
+
+  const bdaysToday = bdays.filter((b) => isSameDay(b.next, today));
+  const bdaysWeek = bdays.filter((b) => isWithinInterval(b.next, { start: weekStart, end: weekEnd }) && !isSameDay(b.next, today));
+  const bdaysMonth = bdays.filter((b) => isWithinInterval(b.next, { start: monthStart, end: monthEnd }) && !isWithinInterval(b.next, { start: weekStart, end: weekEnd }));
+  const bdaysUpcoming = bdays.filter((b) => b.days > 0 && !isWithinInterval(b.next, { start: monthStart, end: monthEnd })).slice(0, 4);
+
+  const eventsToday = (data?.events ?? []).filter((e) => e.date === localDateKey(today));
 
   return (
     <div>
@@ -120,86 +82,65 @@ function Dashboard() {
         subtitle={format(today, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
       />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Hábitos hoje" value={`${habitsToday}/${totalHabits}`} icon={Activity} tint="primary" />
-        <StatCard label="Streak" value={`${streak}d`} icon={Heart} tint="blush" hint="dias consecutivos" />
-        <StatCard label="Humor médio" value={avgMood} icon={BookHeart} tint="mint" hint="diário do mês" />
-        <StatCard label="Podcasts" value={data?.podcasts.length ?? 0} icon={Mic} tint="sand" hint="ouvidos no mês" />
-        <StatCard label="Filmes" value={data?.movies.length ?? 0} icon={Film} tint="blush" />
-        <StatCard label="Episódios" value={episodes} icon={Tv} tint="primary" hint="acumulado" />
-        <StatCard label="Livros" value={data?.books.length ?? 0} icon={BookOpen} tint="mint" hint="concluídos" />
-        <StatCard label="Eventos" value={data?.events.length ?? 0} icon={Calendar} tint="sand" hint="próximos" />
-      </div>
-
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="cozy-card p-5 lg:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h3 className="font-display text-lg">Hábitos do mês</h3>
-              <p className="text-xs text-muted-foreground">{format(today, "MMMM", { locale: ptBR })}</p>
-            </div>
+      {/* Minha Jornada */}
+      <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="font-display text-2xl">Minha Jornada</h2>
+            <p className="text-sm text-muted-foreground">Momentos vividos ao longo do ano</p>
           </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={monthChart}>
-              <defs>
-                <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.5} />
-                  <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="day" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-              <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12 }} />
-              <Area dataKey="habitos" stroke="var(--chart-1)" strokeWidth={2.5} fill="url(#g1)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </motion.div>
+          <select
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+            className="rounded-full border border-border bg-card px-4 py-2 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            {years.map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="cozy-card p-5">
-          <h3 className="font-display text-lg">Consumo</h3>
-          <p className="mb-3 text-xs text-muted-foreground">no mês</p>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={mediaChart}>
-              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-              <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12 }} />
-              <Bar dataKey="v" radius={[8, 8, 0, 0]} fill="var(--chart-2)" />
-            </BarChart>
-          </ResponsiveContainer>
-        </motion.div>
-      </div>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {cards.map((c) => (
+            <motion.div key={c.label} whileHover={{ y: -3 }} className="cozy-card p-5">
+              <div className="text-3xl">{c.emoji}</div>
+              <div className="mt-3 text-xs uppercase tracking-wide text-muted-foreground">{c.label}</div>
+              <div className="mt-1 font-display text-4xl leading-none">{c.value}</div>
+              <div className="mt-2 text-xs text-muted-foreground">{c.unit} em {year}</div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.section>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="cozy-card p-5 lg:col-span-2">
-          <h3 className="font-display text-lg">Heatmap de hábitos</h3>
-          <p className="mb-4 text-xs text-muted-foreground">últimos 120 dias</p>
-          <div className="grid grid-flow-col grid-rows-7 gap-1 overflow-x-auto pb-2">
-            {heat.map((d) => {
-              const intensity = Math.min(1, d.count / 4);
-              return (
-                <div
-                  key={d.date}
-                  title={`${d.date}: ${d.count}`}
-                  className="h-3.5 w-3.5 rounded-[4px]"
-                  style={{
-                    background: d.count === 0
-                      ? "var(--muted)"
-                      : `oklch(0.74 ${0.04 + intensity * 0.1} 195 / ${0.35 + intensity * 0.65})`,
-                  }}
-                />
-              );
-            })}
-          </div>
-        </motion.div>
-
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Eventos */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="cozy-card p-5">
-          <h3 className="mb-1 font-display text-lg">Próximos eventos</h3>
-          <p className="mb-3 text-xs text-muted-foreground">na sua agenda</p>
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-primary" />
+              <h3 className="font-display text-lg">Agenda</h3>
+            </div>
+            <Link to="/agenda" className="text-xs text-primary hover:underline">Ver agenda completa →</Link>
+          </div>
+
+          {eventsToday.length > 0 && (
+            <div className="mb-4">
+              <div className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">Hoje</div>
+              <ul className="space-y-2">
+                {eventsToday.map((e) => (
+                  <li key={e.id} className="flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium">{e.title}</div>
+                      {e.time_str && <div className="text-xs text-muted-foreground">{e.time_str}</div>}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">Próximos</div>
           {data?.events.length ? (
             <ul className="space-y-2">
-              {data.events.map((e) => (
+              {data.events.filter((e) => e.date !== localDateKey(today)).slice(0, 5).map((e) => (
                 <li key={e.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
                   <div className="grid h-10 w-10 place-items-center rounded-xl bg-blush/30 text-center">
                     <div className="font-display text-sm leading-none">{formatDateOnly(e.date, "d")}</div>
@@ -216,28 +157,71 @@ function Dashboard() {
             <p className="text-sm text-muted-foreground">Nenhum evento. Que sossego.</p>
           )}
         </motion.div>
-      </div>
 
-      <div className="mt-6">
+        {/* Aniversários */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="cozy-card p-5">
           <div className="mb-3 flex items-center gap-2">
             <Cake className="h-4 w-4 text-primary" />
-            <h3 className="font-display text-lg">Próximos aniversários</h3>
+            <h3 className="font-display text-lg">Aniversários</h3>
           </div>
-          {upcomingBdays.length ? (
-            <div className="grid gap-3 md:grid-cols-4">
-              {upcomingBdays.map((b) => (
-                <div key={b.id} className="rounded-2xl border border-border p-4">
-                  <div className="text-xs uppercase text-muted-foreground">{b.category}</div>
-                  <div className="mt-1 font-display text-lg">{b.name}</div>
-                  <div className="mt-1 text-sm text-primary">
-                    {b.days === 0 ? "🎂 Hoje!" : `em ${b.days} dia${b.days === 1 ? "" : "s"}`}
+
+          {bdaysToday.length > 0 && (
+            <div className="mb-4">
+              <div className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">🎂 Hoje</div>
+              <div className="grid gap-2">
+                {bdaysToday.map((b) => (
+                  <div key={b.id} className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+                    <div className="font-display text-base">{b.name}</div>
+                    <div className="text-xs text-muted-foreground">{b.category}</div>
                   </div>
-                  <div className="text-xs text-muted-foreground">{format(b.next, "d 'de' MMMM", { locale: ptBR })}</div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          ) : (
+          )}
+
+          {bdaysWeek.length > 0 && (
+            <div className="mb-4">
+              <div className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">Esta semana</div>
+              <ul className="space-y-1.5">
+                {bdaysWeek.map((b) => (
+                  <li key={b.id} className="flex items-center justify-between rounded-lg border border-border p-2.5 text-sm">
+                    <span className="font-medium">{b.name}</span>
+                    <span className="text-xs text-primary">{format(b.next, "EEE, d MMM", { locale: ptBR })}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {bdaysMonth.length > 0 && (
+            <div className="mb-4">
+              <div className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">Este mês</div>
+              <ul className="space-y-1.5">
+                {bdaysMonth.map((b) => (
+                  <li key={b.id} className="flex items-center justify-between rounded-lg border border-border p-2.5 text-sm">
+                    <span className="font-medium">{b.name}</span>
+                    <span className="text-xs text-muted-foreground">{format(b.next, "d MMM", { locale: ptBR })}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {bdaysUpcoming.length > 0 && (
+            <div>
+              <div className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">Próximos</div>
+              <ul className="space-y-1.5">
+                {bdaysUpcoming.map((b) => (
+                  <li key={b.id} className="flex items-center justify-between rounded-lg border border-border p-2.5 text-sm">
+                    <span className="font-medium">{b.name}</span>
+                    <span className="text-xs text-muted-foreground">em {b.days} dias</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {!bdaysToday.length && !bdaysWeek.length && !bdaysMonth.length && !bdaysUpcoming.length && (
             <p className="text-sm text-muted-foreground">Adicione aniversários para receber lembretes.</p>
           )}
         </motion.div>
