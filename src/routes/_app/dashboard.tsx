@@ -106,6 +106,16 @@ function Dashboard() {
         </div>
 
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <motion.div whileHover={{ y: -3 }} className="cozy-card p-5">
+            <div className="text-3xl">🎧</div>
+            <div className="mt-3 text-xs uppercase tracking-wide text-muted-foreground">Podcasts</div>
+            <div className="mt-1 font-display text-3xl leading-none">{episodesInMonth}</div>
+            <div className="text-[11px] text-muted-foreground">episódios em <span className="capitalize">{monthLabel}</span></div>
+            <div className="mt-2 border-t border-border/60 pt-2">
+              <div className="font-display text-xl leading-none">{podcastsInYear}</div>
+              <div className="text-[11px] text-muted-foreground">podcasts acompanhados em {year}</div>
+            </div>
+          </motion.div>
           {cards.map((c) => (
             <motion.div key={c.label} whileHover={{ y: -3 }} className="cozy-card p-5">
               <div className="text-3xl">{c.emoji}</div>
@@ -116,6 +126,7 @@ function Dashboard() {
           ))}
         </div>
       </motion.section>
+
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Eventos */}
