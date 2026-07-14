@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/cozy";
 import { Calendar, Cake, Sparkles } from "lucide-react";
 import { format, addYears, isAfter, subDays, differenceInCalendarDays, startOfWeek, endOfWeek, isSameDay, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
+// no-op
 import { ptBR } from "date-fns/locale";
 import { formatDateOnly, localDateKey, parseDateOnly } from "@/lib/dates";
 
@@ -22,20 +23,23 @@ function Dashboard() {
   const yearStart = `${year}-01-01`;
   const yearEnd = `${year}-12-31`;
 
+  const monthStartKey = `${year}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
+  const monthEndKey = `${year}-${String(today.getMonth() + 1).padStart(2, "0")}-31`;
+
   const { data } = useQuery({
     enabled: !!user,
     queryKey: ["dashboard", user?.id, year],
     queryFn: async () => {
       const [episodes, movies, series, books, events, birthdays] = await Promise.all([
-        supabase.from("podcast_episodes").select("id, status, listened_date").eq("status", "listened").gte("listened_date", yearStart).lte("listened_date", yearEnd),
+        supabase.from("podcast_episodes").select("id, show_id, status, listened_date").eq("status", "listened").gte("listened_date", yearStart).lte("listened_date", yearEnd),
         supabase.from("movies").select("id, watched_date").gte("watched_date", yearStart).lte("watched_date", yearEnd),
         supabase.from("series").select("id, status, kind, end_date").eq("status", "finalizada").gte("end_date", yearStart).lte("end_date", yearEnd),
         supabase.from("books").select("id, status, end_date").eq("status", "concluido").gte("end_date", yearStart).lte("end_date", yearEnd),
-        supabase.from("events").select("*").gte("date", localDateKey(today)).order("date").limit(6),
+        supabase.from("events").select("*").gte("date", localDateKey(today)).eq("completed", false).order("date").limit(6),
         supabase.from("birthdays").select("*"),
       ]);
       return {
-        episodes: episodes.data ?? [],
+        episodes: (episodes.data ?? []) as { id: string; show_id: string | null; listened_date: string | null }[],
         movies: movies.data ?? [],
         series: series.data ?? [],
         books: books.data ?? [],
@@ -44,6 +48,10 @@ function Dashboard() {
       };
     },
   });
+
+  const episodesInMonth = (data?.episodes ?? []).filter(e => e.listened_date && e.listened_date >= monthStartKey && e.listened_date <= monthEndKey).length;
+  const podcastsInYear = new Set((data?.episodes ?? []).map(e => e.show_id).filter(Boolean)).size;
+  const monthLabel = format(new Date(year, today.getMonth(), 1), "MMMM/yyyy", { locale: ptBR });
 
   const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
 
