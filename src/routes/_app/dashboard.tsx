@@ -56,7 +56,6 @@ function Dashboard() {
   const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
 
   const cards = [
-    { emoji: "🎧", label: "Podcasts", value: data?.episodes.length ?? 0, unit: "podcasts ouvidos" },
     { emoji: "🎬", label: "Filmes", value: data?.movies.length ?? 0, unit: "filmes assistidos" },
     { emoji: "📺", label: "Séries", value: data?.series.length ?? 0, unit: "séries concluídas" },
     { emoji: "📚", label: "Livros", value: data?.books.length ?? 0, unit: "livros concluídos" },
