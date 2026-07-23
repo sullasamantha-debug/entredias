@@ -22,8 +22,9 @@ export const Route = createFileRoute("/_app/podcasts/")({ component: PodcastsPag
 type Show = {
   id: string; name: string; description: string | null;
   cover_url: string | null; tags: string[] | null; favorite: boolean;
-  show_status: string;
+  show_status: string; created_at?: string; updated_at?: string;
 };
+
 type Ep = {
   id: string; show_id: string; duration_seconds: number | null;
   listened_date: string | null; title: string; favorite: boolean; status: string;
