@@ -244,10 +244,23 @@ function PodcastsPage() {
             <Star className="h-3.5 w-3.5" />Favoritos
           </button>
         </div>
-        <div className="relative w-full max-w-xs">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar podcast ou tag…" className="pl-9 rounded-full" />
+        <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
+          <div className="relative w-full max-w-xs">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar podcast ou tag…" className="pl-9 rounded-full" />
+          </div>
+          {tab === "library" && (
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+              aria-label="Ordenar por"
+              className="h-10 rounded-full border border-input bg-card px-3 text-sm text-foreground"
+            >
+              {SORT_OPTS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+            </select>
+          )}
         </div>
+
       </div>
 
       {tab === "library" && (
