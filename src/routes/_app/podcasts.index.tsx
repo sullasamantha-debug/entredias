@@ -22,14 +22,28 @@ export const Route = createFileRoute("/_app/podcasts/")({ component: PodcastsPag
 type Show = {
   id: string; name: string; description: string | null;
   cover_url: string | null; tags: string[] | null; favorite: boolean;
-  show_status: string;
+  show_status: string; created_at?: string; updated_at?: string;
 };
+
 type Ep = {
   id: string; show_id: string; duration_seconds: number | null;
   listened_date: string | null; title: string; favorite: boolean; status: string;
 };
 
 type Filter = "all" | "ongoing" | "ended" | "favorites";
+type SortKey = "name_asc" | "name_desc" | "created_desc" | "updated_desc" | "eps_desc" | "eps_asc" | "fav_first";
+
+const SORT_OPTS: { key: SortKey; label: string }[] = [
+  { key: "name_asc", label: "Nome (A → Z)" },
+  { key: "name_desc", label: "Nome (Z → A)" },
+  { key: "created_desc", label: "Mais recentes" },
+  { key: "updated_desc", label: "Recém atualizados" },
+  { key: "eps_desc", label: "Mais episódios" },
+  { key: "eps_asc", label: "Menos episódios" },
+  { key: "fav_first", label: "Favoritos primeiro" },
+];
+const SORT_STORAGE_KEY = "podcasts.sort";
+
 
 const SHOW_STATUS_OPTS = [
   { value: "ongoing", label: "Em andamento" },
@@ -63,7 +77,15 @@ function PodcastsPage() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"library" | "favorites">("library");
   const [filter, setFilter] = useState<Filter>("all");
+  const [sort, setSort] = useState<SortKey>(() => {
+    if (typeof window === "undefined") return "name_asc";
+    return (localStorage.getItem(SORT_STORAGE_KEY) as SortKey) || "name_asc";
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem(SORT_STORAGE_KEY, sort);
+  }, [sort]);
   const [form, setForm] = useState(empty());
+
 
   useEffect(() => {
     if (!open) return;
@@ -122,12 +144,25 @@ function PodcastsPage() {
   const shows = data?.shows ?? [];
   const eps = data?.eps ?? [];
   const s = search.toLowerCase();
+  const epCount = (id: string) => eps.filter((e) => e.show_id === id).length;
+  const collator = new Intl.Collator("pt-BR", { sensitivity: "base" });
   const filtered = shows.filter((x) => {
     if (s && !x.name.toLowerCase().includes(s) && !(x.tags ?? []).some((t) => t.toLowerCase().includes(s))) return false;
     if (filter === "all") return true;
     if (filter === "favorites") return x.favorite;
     return x.show_status === filter;
+  }).sort((a, b) => {
+    switch (sort) {
+      case "name_desc": return collator.compare(b.name, a.name);
+      case "created_desc": return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+      case "updated_desc": return (b.updated_at ?? "").localeCompare(a.updated_at ?? "");
+      case "eps_desc": return epCount(b.id) - epCount(a.id) || collator.compare(a.name, b.name);
+      case "eps_asc": return epCount(a.id) - epCount(b.id) || collator.compare(a.name, b.name);
+      case "fav_first": return (Number(b.favorite) - Number(a.favorite)) || collator.compare(a.name, b.name);
+      default: return collator.compare(a.name, b.name);
+    }
   });
+
 
   const listened = eps.filter((e) => e.status === "listened");
   const want = eps.filter((e) => e.status === "want");
@@ -209,10 +244,23 @@ function PodcastsPage() {
             <Star className="h-3.5 w-3.5" />Favoritos
           </button>
         </div>
-        <div className="relative w-full max-w-xs">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar podcast ou tag…" className="pl-9 rounded-full" />
+        <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
+          <div className="relative w-full max-w-xs">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar podcast ou tag…" className="pl-9 rounded-full" />
+          </div>
+          {tab === "library" && (
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+              aria-label="Ordenar por"
+              className="h-10 rounded-full border border-input bg-card px-3 text-sm text-foreground"
+            >
+              {SORT_OPTS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+            </select>
+          )}
         </div>
+
       </div>
 
       {tab === "library" && (
