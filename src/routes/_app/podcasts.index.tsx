@@ -144,12 +144,25 @@ function PodcastsPage() {
   const shows = data?.shows ?? [];
   const eps = data?.eps ?? [];
   const s = search.toLowerCase();
+  const epCount = (id: string) => eps.filter((e) => e.show_id === id).length;
+  const collator = new Intl.Collator("pt-BR", { sensitivity: "base" });
   const filtered = shows.filter((x) => {
     if (s && !x.name.toLowerCase().includes(s) && !(x.tags ?? []).some((t) => t.toLowerCase().includes(s))) return false;
     if (filter === "all") return true;
     if (filter === "favorites") return x.favorite;
     return x.show_status === filter;
+  }).sort((a, b) => {
+    switch (sort) {
+      case "name_desc": return collator.compare(b.name, a.name);
+      case "created_desc": return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+      case "updated_desc": return (b.updated_at ?? "").localeCompare(a.updated_at ?? "");
+      case "eps_desc": return epCount(b.id) - epCount(a.id) || collator.compare(a.name, b.name);
+      case "eps_asc": return epCount(a.id) - epCount(b.id) || collator.compare(a.name, b.name);
+      case "fav_first": return (Number(b.favorite) - Number(a.favorite)) || collator.compare(a.name, b.name);
+      default: return collator.compare(a.name, b.name);
+    }
   });
+
 
   const listened = eps.filter((e) => e.status === "listened");
   const want = eps.filter((e) => e.status === "want");
