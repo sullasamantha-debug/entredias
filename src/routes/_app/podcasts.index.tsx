@@ -77,7 +77,15 @@ function PodcastsPage() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"library" | "favorites">("library");
   const [filter, setFilter] = useState<Filter>("all");
+  const [sort, setSort] = useState<SortKey>(() => {
+    if (typeof window === "undefined") return "name_asc";
+    return (localStorage.getItem(SORT_STORAGE_KEY) as SortKey) || "name_asc";
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem(SORT_STORAGE_KEY, sort);
+  }, [sort]);
   const [form, setForm] = useState(empty());
+
 
   useEffect(() => {
     if (!open) return;
