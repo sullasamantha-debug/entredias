@@ -230,55 +230,46 @@ function PodcastsPage() {
         !filtered.length ? (
           <EmptyState title="Nada por aqui" description="Adicione um podcast — pode ser só para lembrar de ouvir depois." />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map((x, i) => {
               const my = eps.filter((e) => e.show_id === x.id);
-              const myListened = my.filter((e) => e.status === "listened");
-              const myWant = my.filter((e) => e.status === "want").length;
-              const sec = myListened.reduce((a, e) => a + (e.duration_seconds ?? 0), 0);
-              const last = myListened[0];
+              const genre = (x.tags ?? [])[0];
               const sb = showStatusBadge(x.show_status);
               return (
-                <motion.div key={x.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="cozy-card overflow-hidden">
-                  <Link to="/podcasts/$showId" params={{ showId: x.id }} className="block">
-                    <div className="aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-primary/20 to-blush/30">
+                <motion.div key={x.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.02 }}>
+                  <Link to="/podcasts/$showId" params={{ showId: x.id }} className="cozy-card group flex items-center gap-3 p-3 hover:bg-accent/40">
+                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 to-blush/30">
                       {x.cover_url ? (
                         <img src={x.cover_url} alt={x.name} className="h-full w-full object-cover" />
                       ) : (
-                        <div className="grid h-full place-items-center">
-                          <Mic className="h-12 w-12 text-primary/40" />
-                        </div>
+                        <div className="grid h-full place-items-center"><Mic className="h-5 w-5 text-primary/50" /></div>
                       )}
                     </div>
-                  </Link>
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <Link to="/podcasts/$showId" params={{ showId: x.id }} className="min-w-0 flex-1">
-                        <div className="font-display text-lg truncate">{x.name}</div>
-                      </Link>
-                      <div className="flex gap-0.5">
-                        <button onClick={() => toggleFav(x)} className="grid h-8 w-8 place-items-center rounded-lg hover:bg-accent">
-                          <Heart className={`h-4 w-4 ${x.favorite ? "fill-[var(--blush)] text-[var(--blush)]" : "text-muted-foreground"}`} />
-                        </button>
-                        <button onClick={() => { setEditing(x); setOpen(true); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"><Pencil className="h-4 w-4" /></button>
-                        <button onClick={() => setConfirmId(x.id)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <div className="truncate font-medium">{x.name}</div>
+                        {x.favorite && <Heart className="h-3.5 w-3.5 shrink-0 fill-[var(--blush)] text-[var(--blush)]" />}
+                      </div>
+                      <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span>{my.length} ep</span>
+                        {genre && <><span>·</span><span className="truncate">{genre}</span></>}
+                        {x.show_status === "ended" && <><span>·</span><span className={sb.cls + " rounded-full px-1.5 py-0.5 text-[10px]"}>{sb.label}</span></>}
                       </div>
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] ${sb.cls}`}>{sb.label}</span>
-                      {myWant > 0 && <span className="rounded-full bg-blush/30 px-2 py-0.5 text-[10px] text-foreground/80">{myWant} p/ ouvir</span>}
+                    <div className="flex shrink-0 gap-0.5 opacity-0 transition group-hover:opacity-100">
+                      <button onClick={(e) => { e.preventDefault(); toggleFav(x); }} className="grid h-8 w-8 place-items-center rounded-lg hover:bg-accent">
+                        <Heart className={`h-4 w-4 ${x.favorite ? "fill-[var(--blush)] text-[var(--blush)]" : "text-muted-foreground"}`} />
+                      </button>
+                      <button onClick={(e) => { e.preventDefault(); setEditing(x); setOpen(true); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"><Pencil className="h-4 w-4" /></button>
+                      <button onClick={(e) => { e.preventDefault(); setConfirmId(x.id); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
                     </div>
-                    <div className="mt-2"><TagBadges tags={x.tags} /></div>
-                    <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{myListened.length}/{my.length} ep · {fmtDur(sec)}</span>
-                      {last && <span className="truncate ml-2">último: {last.title}</span>}
-                    </div>
-                  </div>
+                  </Link>
                 </motion.div>
               );
             })}
           </div>
         )
+
       ) : (
         <FavoritesView shows={shows} eps={eps} search={search} />
       )}
