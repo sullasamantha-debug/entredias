@@ -30,6 +30,19 @@ type Ep = {
 };
 
 type Filter = "all" | "ongoing" | "ended" | "favorites";
+type SortKey = "name_asc" | "name_desc" | "created_desc" | "updated_desc" | "eps_desc" | "eps_asc" | "fav_first";
+
+const SORT_OPTS: { key: SortKey; label: string }[] = [
+  { key: "name_asc", label: "Nome (A → Z)" },
+  { key: "name_desc", label: "Nome (Z → A)" },
+  { key: "created_desc", label: "Mais recentes" },
+  { key: "updated_desc", label: "Recém atualizados" },
+  { key: "eps_desc", label: "Mais episódios" },
+  { key: "eps_asc", label: "Menos episódios" },
+  { key: "fav_first", label: "Favoritos primeiro" },
+];
+const SORT_STORAGE_KEY = "podcasts.sort";
+
 
 const SHOW_STATUS_OPTS = [
   { value: "ongoing", label: "Em andamento" },
