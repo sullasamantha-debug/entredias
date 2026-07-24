@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Mic, Plus, Heart, Clock, Trash2, Pencil, Search, Star, Headphones, Bookmark } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateBR } from "@/lib/dates";
