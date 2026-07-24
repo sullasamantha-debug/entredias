@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Mic, Plus, Heart, Clock, Trash2, Pencil, Search, Star, Headphones, Bookmark } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateBR } from "@/lib/dates";
@@ -278,44 +279,52 @@ function PodcastsPage() {
         !filtered.length ? (
           <EmptyState title="Nada por aqui" description="Adicione um podcast — pode ser só para lembrar de ouvir depois." />
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filtered.map((x, i) => {
-              const my = eps.filter((e) => e.show_id === x.id);
-              const genre = (x.tags ?? [])[0];
-              const sb = showStatusBadge(x.show_status);
-              return (
-                <motion.div key={x.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.02 }}>
-                  <Link to="/podcasts/$showId" params={{ showId: x.id }} className="cozy-card group flex items-center gap-3 p-3 hover:bg-accent/40">
-                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 to-blush/30">
-                      {x.cover_url ? (
-                        <img src={x.cover_url} alt={x.name} className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="grid h-full place-items-center"><Mic className="h-5 w-5 text-primary/50" /></div>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <div className="truncate font-medium">{x.name}</div>
-                        {x.favorite && <Heart className="h-3.5 w-3.5 shrink-0 fill-[var(--blush)] text-[var(--blush)]" />}
+          <TooltipProvider delayDuration={300}>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {filtered.map((x, i) => {
+                const my = eps.filter((e) => e.show_id === x.id);
+                const genre = (x.tags ?? [])[0];
+                const sb = showStatusBadge(x.show_status);
+                return (
+                  <motion.div key={x.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.02 }}>
+                    <div className="cozy-card group relative flex h-full flex-col items-center p-3 pt-4 text-center hover:bg-accent/40">
+                      <Link to="/podcasts/$showId" params={{ showId: x.id }} className="flex w-full flex-col items-center">
+                        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 to-blush/30 shadow-sm">
+                          {x.cover_url ? (
+                            <img src={x.cover_url} alt={x.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="grid h-full place-items-center"><Mic className="h-7 w-7 text-primary/50" /></div>
+                          )}
+                        </div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="mt-3 line-clamp-2 min-h-[2.5em] w-full px-1 text-sm font-medium leading-tight">
+                              {x.name}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs text-center">
+                            <p>{x.name}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <div className="mt-1.5 flex flex-wrap items-center justify-center gap-1 text-[11px] text-muted-foreground">
+                          <span>{my.length} ep</span>
+                          {genre && <><span>·</span><span className="truncate max-w-[5rem]">{genre}</span></>}
+                          {x.show_status === "ended" && <><span>·</span><span className={sb.cls + " rounded-full px-1.5 py-0.5 text-[10px]"}>{sb.label}</span></>}
+                        </div>
+                      </Link>
+                      <div className="mt-3 flex gap-0.5 opacity-0 transition group-hover:opacity-100">
+                        <button onClick={() => toggleFav(x)} className="grid h-8 w-8 place-items-center rounded-lg hover:bg-accent">
+                          <Heart className={`h-4 w-4 ${x.favorite ? "fill-[var(--blush)] text-[var(--blush)]" : "text-muted-foreground"}`} />
+                        </button>
+                        <button onClick={() => { setEditing(x); setOpen(true); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"><Pencil className="h-4 w-4" /></button>
+                        <button onClick={() => setConfirmId(x.id)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
                       </div>
-                      <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <span>{my.length} ep</span>
-                        {genre && <><span>·</span><span className="truncate">{genre}</span></>}
-                        {x.show_status === "ended" && <><span>·</span><span className={sb.cls + " rounded-full px-1.5 py-0.5 text-[10px]"}>{sb.label}</span></>}
-                      </div>
                     </div>
-                    <div className="flex shrink-0 gap-0.5 opacity-0 transition group-hover:opacity-100">
-                      <button onClick={(e) => { e.preventDefault(); toggleFav(x); }} className="grid h-8 w-8 place-items-center rounded-lg hover:bg-accent">
-                        <Heart className={`h-4 w-4 ${x.favorite ? "fill-[var(--blush)] text-[var(--blush)]" : "text-muted-foreground"}`} />
-                      </button>
-                      <button onClick={(e) => { e.preventDefault(); setEditing(x); setOpen(true); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"><Pencil className="h-4 w-4" /></button>
-                      <button onClick={(e) => { e.preventDefault(); setConfirmId(x.id); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
-                    </div>
-                  </Link>
-                </motion.div>
-              );
-            })}
-          </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </TooltipProvider>
         )
 
       ) : (
