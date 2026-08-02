@@ -1,0 +1,351 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.1",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://hnyhhfsinzzqgnfmihbx.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "life-compass",
+      "version": "0.1.0",
+      "title": "Life Compass"
+    },
+    "tools": [
+      {
+        "name": "list_events",
+        "title": "Listar eventos da agenda",
+        "description": "Lista os próximos eventos da agenda do usuário autenticado.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "from": {
+              "description": "Data inicial (YYYY-MM-DD). Padrão: hoje.",
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "to": {
+              "description": "Data final (YYYY-MM-DD).",
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "includeCompleted": {
+              "description": "Incluir eventos concluídos. Padrão: false.",
+              "type": "boolean"
+            },
+            "limit": {
+              "description": "Máximo de eventos. Padrão: 20.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_event",
+        "title": "Criar evento na agenda",
+        "description": "Cria um novo evento na agenda do usuário autenticado.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Título do evento."
+            },
+            "date": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Data do evento (YYYY-MM-DD)."
+            },
+            "time": {
+              "description": "Horário em texto livre, ex: '14:30'.",
+              "type": "string"
+            },
+            "type": {
+              "description": "Tipo do evento, ex: 'evento', 'compromisso'.",
+              "type": "string"
+            },
+            "description": {
+              "description": "Descrição adicional.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "title",
+            "date"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "complete_event",
+        "title": "Concluir evento",
+        "description": "Marca um evento da agenda como concluído (ou reabre).",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "ID do evento."
+            },
+            "completed": {
+              "description": "true para concluir (padrão), false para reabrir.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_books",
+        "title": "Listar livros",
+        "description": "Lista os livros da biblioteca do usuário, com filtro opcional por status.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "status": {
+              "description": "Filtrar por status.",
+              "type": "string",
+              "enum": [
+                "lendo",
+                "concluido",
+                "quero_ler",
+                "pausado",
+                "abandonado"
+              ]
+            },
+            "limit": {
+              "description": "Máximo de livros. Padrão: 25.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_book",
+        "title": "Adicionar livro",
+        "description": "Adiciona um livro à biblioteca do usuário autenticado.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Título do livro."
+            },
+            "author": {
+              "description": "Autor.",
+              "type": "string"
+            },
+            "status": {
+              "description": "Status. Padrão: lendo.",
+              "type": "string",
+              "enum": [
+                "lendo",
+                "concluido",
+                "quero_ler",
+                "pausado",
+                "abandonado"
+              ]
+            },
+            "pages": {
+              "description": "Número de páginas.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "category": {
+              "description": "Categoria/gênero.",
+              "type": "string"
+            },
+            "startDate": {
+              "description": "Data de início (YYYY-MM-DD).",
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "endDate": {
+              "description": "Data de conclusão (YYYY-MM-DD).",
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "rating": {
+              "description": "Nota de 1 a 5.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            }
+          },
+          "required": [
+            "title"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_diary_entries",
+        "title": "Listar entradas do diário",
+        "description": "Lista entradas do diário do usuário em um intervalo de datas.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "from": {
+              "description": "Data inicial (YYYY-MM-DD).",
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "to": {
+              "description": "Data final (YYYY-MM-DD).",
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "limit": {
+              "description": "Máximo de entradas. Padrão: 10.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_diary_entry",
+        "title": "Criar entrada no diário",
+        "description": "Cria uma entrada no diário do usuário autenticado.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "date": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Data da entrada (YYYY-MM-DD)."
+            },
+            "title": {
+              "description": "Título da entrada.",
+              "type": "string"
+            },
+            "content": {
+              "description": "Texto da entrada.",
+              "type": "string"
+            },
+            "mood": {
+              "description": "Humor de 1 a 5.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            },
+            "energy": {
+              "description": "Energia de 1 a 5.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            },
+            "anxiety": {
+              "description": "Ansiedade de 1 a 5.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            },
+            "gratitude": {
+              "description": "Gratidão do dia.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "date"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "finance_summary",
+        "title": "Resumo financeiro do período",
+        "description": "Resume receitas, despesas e saldo das transações em um intervalo de datas, com totais por categoria.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Data inicial (YYYY-MM-DD)."
+            },
+            "to": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Data final (YYYY-MM-DD)."
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
