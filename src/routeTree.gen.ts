@@ -25,6 +25,7 @@ import { Route as AppAniversariosRouteImport } from './routes/_app/aniversarios'
 import { Route as AppAgendaRouteImport } from './routes/_app/agenda'
 import { Route as AppPodcastsIndexRouteImport } from './routes/_app/podcasts.index'
 import { Route as AppPodcastsShowIdRouteImport } from './routes/_app/podcasts.$showId'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -105,6 +106,11 @@ const AppPodcastsShowIdRoute = AppPodcastsShowIdRouteImport.update({
   path: '/podcasts/$showId',
   getParentRoute: () => AppRoute,
 } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/livros': typeof AppLivrosRoute
   '/metas': typeof AppMetasRoute
   '/series': typeof AppSeriesRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/podcasts/$showId': typeof AppPodcastsShowIdRoute
   '/podcasts/': typeof AppPodcastsIndexRoute
 }
@@ -137,6 +144,7 @@ export interface FileRoutesByTo {
   '/livros': typeof AppLivrosRoute
   '/metas': typeof AppMetasRoute
   '/series': typeof AppSeriesRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/podcasts/$showId': typeof AppPodcastsShowIdRoute
   '/podcasts': typeof AppPodcastsIndexRoute
 }
@@ -156,6 +164,7 @@ export interface FileRoutesById {
   '/_app/livros': typeof AppLivrosRoute
   '/_app/metas': typeof AppMetasRoute
   '/_app/series': typeof AppSeriesRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_app/podcasts/$showId': typeof AppPodcastsShowIdRoute
   '/_app/podcasts/': typeof AppPodcastsIndexRoute
 }
@@ -175,6 +184,7 @@ export interface FileRouteTypes {
     | '/livros'
     | '/metas'
     | '/series'
+    | '/.lovable/oauth/consent'
     | '/podcasts/$showId'
     | '/podcasts/'
   fileRoutesByTo: FileRoutesByTo
@@ -192,6 +202,7 @@ export interface FileRouteTypes {
     | '/livros'
     | '/metas'
     | '/series'
+    | '/.lovable/oauth/consent'
     | '/podcasts/$showId'
     | '/podcasts'
   id:
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/_app/livros'
     | '/_app/metas'
     | '/_app/series'
+    | '/.lovable/oauth/consent'
     | '/_app/podcasts/$showId'
     | '/_app/podcasts/'
   fileRoutesById: FileRoutesById
@@ -218,6 +230,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -334,6 +347,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPodcastsShowIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -375,6 +395,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
