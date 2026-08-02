@@ -11,17 +11,18 @@ import { Sparkles } from "lucide-react";
 export const Route = createFileRoute("/login")({
   validateSearch: (s: Record<string, unknown>) => ({
     mode: (s.mode as string) === "signup" ? "signup" : "login",
+    next: typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//") ? s.next : undefined,
   }),
-  beforeLoad: async () => {
+  beforeLoad: async ({ search }) => {
     if (typeof window === "undefined") return;
     const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/dashboard" });
+    if (data.session) throw redirect({ href: search.next ?? "/dashboard" });
   },
   component: LoginPage,
 });
 
 function LoginPage() {
-  const { mode } = Route.useSearch();
+  const { mode, next } = Route.useSearch();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,7 +38,7 @@ function LoginPage() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
+            emailRedirectTo: `${window.location.origin}${next ?? "/dashboard"}`,
             data: { display_name: name },
           },
         });
@@ -45,12 +46,16 @@ function LoginPage() {
         toast.success("Conta criada! Verifique seu email para confirmar.");
         // try direct login (if email confirmation off)
         const { data } = await supabase.auth.signInWithPassword({ email, password });
-        if (data.session) navigate({ to: "/dashboard" });
+        if (data.session) {
+          if (next) window.location.href = next;
+          else navigate({ to: "/dashboard" });
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Bem-vinda de volta ✨");
-        navigate({ to: "/dashboard" });
+        if (next) window.location.href = next;
+        else navigate({ to: "/dashboard" });
       }
     } catch (err) {
       const e = err as Error & { name?: string; status?: number };
@@ -128,9 +133,9 @@ function LoginPage() {
 
           <p className="mt-5 text-center text-sm text-muted-foreground">
             {mode === "signup" ? (
-              <>Já tem conta? <Link to="/login" className="text-primary hover:underline">Entrar</Link></>
+              <>Já tem conta? <Link to="/login" search={{ mode: "login", next }} className="text-primary hover:underline">Entrar</Link></>
             ) : (
-              <>Novo por aqui? <Link to="/login" search={{ mode: "signup" }} className="text-primary hover:underline">Criar conta</Link></>
+              <>Novo por aqui? <Link to="/login" search={{ mode: "signup", next }} className="text-primary hover:underline">Criar conta</Link></>
             )}
           </p>
         </motion.div>
