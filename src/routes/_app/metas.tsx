@@ -26,6 +26,15 @@ function MetasPage() {
     enabled: !!user, queryKey: ["goals", user?.id],
     queryFn: async () => (await supabase.from("goals").select("*").order("created_at", { ascending: false })).data ?? [],
   });
+  const { data: linkedTasks } = useQuery({
+    enabled: !!user, queryKey: ["tasks", user?.id],
+    queryFn: async () => (await supabase.from("tasks").select("id,title,status,goal_id").not("goal_id", "is", null)).data ?? [],
+  });
+  const { data: linkedWishes } = useQuery({
+    enabled: !!user, queryKey: ["wishes", user?.id],
+    queryFn: async () => (await supabase.from("wishes").select("id,name,status,goal_id").not("goal_id", "is", null)).data ?? [],
+  });
+
 
   const save = async () => {
     if (!user || !form.title) return;
