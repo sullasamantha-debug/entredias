@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, BookHeart, Activity, Mic, Tv, Film, BookOpen,
-  Calendar, Cake, Target, Moon, Sun, LogOut, Wallet, Download, Leaf, Menu,
+  Calendar, Cake, Target, Moon, Sun, LogOut, Wallet, Download, Leaf, Menu, ListChecks,
 } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { toast } from "sonner";
