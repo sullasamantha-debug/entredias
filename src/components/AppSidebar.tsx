@@ -23,7 +23,9 @@ const nav = [
   { to: "/aniversarios", label: "Aniversários", icon: Cake },
   { to: "/financas", label: "Finanças", icon: Wallet },
   { to: "/metas", label: "Metas", icon: Target },
+  { to: "/listas", label: "Listas", icon: ListChecks },
   { to: "/exportar", label: "Exportar", icon: Download },
+
 ] as const;
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
