@@ -611,7 +611,7 @@ function WishesTab({ wishes, goals, cats, onChange }: { wishes: Wish[]; goals: G
           <DialogHeader><DialogTitle className="font-display">{editing ? "Editar desejo" : "Novo desejo"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Nome</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Air Fryer, Japão, Curso de cerâmica..." /></div>
-            <div><Label>Imagem</Label><CoverUpload value={form.image_url} onChange={(image_url) => setForm({ ...form, image_url })} bucket="list-images" /></div>
+            <div><Label>Imagem</Label><CoverUpload value={form.image_url} onChange={(image_url) => setForm({ ...form, image_url })} /></div>
             <div><Label>Descrição</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Tipo</Label>
