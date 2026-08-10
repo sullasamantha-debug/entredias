@@ -9,31 +9,35 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as McpRouteImport } from './routes/mcp'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AppSeriesRouteImport } from './routes/_app/series'
-import { Route as AppMetasRouteImport } from './routes/_app/metas'
-import { Route as AppLivrosRouteImport } from './routes/_app/livros'
-import { Route as AppHabitosRouteImport } from './routes/_app/habitos'
-import { Route as AppFinancasRouteImport } from './routes/_app/financas'
-import { Route as AppFilmesRouteImport } from './routes/_app/filmes'
-import { Route as AppExportarRouteImport } from './routes/_app/exportar'
-import { Route as AppDiarioRouteImport } from './routes/_app/diario'
-import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
-import { Route as AppAniversariosRouteImport } from './routes/_app/aniversarios'
-import { Route as AppAgendaRouteImport } from './routes/_app/agenda'
-import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AppAgendaRouteImport } from './routes/_app/agenda'
+import { Route as AppAniversariosRouteImport } from './routes/_app/aniversarios'
+import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppDiarioRouteImport } from './routes/_app/diario'
+import { Route as AppExportarRouteImport } from './routes/_app/exportar'
+import { Route as AppFilmesRouteImport } from './routes/_app/filmes'
+import { Route as AppFinancasRouteImport } from './routes/_app/financas'
+import { Route as AppHabitosRouteImport } from './routes/_app/habitos'
+import { Route as AppLivrosRouteImport } from './routes/_app/livros'
+import { Route as AppMetasRouteImport } from './routes/_app/metas'
+import { Route as AppSeriesRouteImport } from './routes/_app/series'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as AppPodcastsIndexRouteImport } from './routes/_app/podcasts.index'
 import { Route as AppPodcastsShowIdRouteImport } from './routes/_app/podcasts.$showId'
-import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
-import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -41,58 +45,26 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRoute = AppRouteImport.update({
-  id: '/_app',
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppSeriesRoute = AppSeriesRouteImport.update({
-  id: '/series',
-  path: '/series',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppMetasRoute = AppMetasRouteImport.update({
-  id: '/metas',
-  path: '/metas',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppLivrosRoute = AppLivrosRouteImport.update({
-  id: '/livros',
-  path: '/livros',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppHabitosRoute = AppHabitosRouteImport.update({
-  id: '/habitos',
-  path: '/habitos',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFinancasRoute = AppFinancasRouteImport.update({
-  id: '/financas',
-  path: '/financas',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFilmesRoute = AppFilmesRouteImport.update({
-  id: '/filmes',
-  path: '/filmes',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppExportarRoute = AppExportarRouteImport.update({
-  id: '/exportar',
-  path: '/exportar',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDiarioRoute = AppDiarioRouteImport.update({
-  id: '/diario',
-  path: '/diario',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDashboardRoute = AppDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AppAgendaRoute = AppAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAniversariosRoute = AppAniversariosRouteImport.update({
@@ -100,21 +72,60 @@ const AppAniversariosRoute = AppAniversariosRouteImport.update({
   path: '/aniversarios',
   getParentRoute: () => AppRoute,
 } as any)
-const AppAgendaRoute = AppAgendaRouteImport.update({
-  id: '/agenda',
-  path: '/agenda',
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
-const Char91DotwellKnownChar93OauthProtectedResourceRoute =
-  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
-    id: '/.well-known/oauth-protected-resource',
-    path: '/.well-known/oauth-protected-resource',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const Char91DotmcpChar93ListToolsRoute =
-  Char91DotmcpChar93ListToolsRouteImport.update({
-    id: '/.mcp/list-tools',
-    path: '/.mcp/list-tools',
+const AppDiarioRoute = AppDiarioRouteImport.update({
+  id: '/diario',
+  path: '/diario',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppExportarRoute = AppExportarRouteImport.update({
+  id: '/exportar',
+  path: '/exportar',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFilmesRoute = AppFilmesRouteImport.update({
+  id: '/filmes',
+  path: '/filmes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFinancasRoute = AppFinancasRouteImport.update({
+  id: '/financas',
+  path: '/financas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppHabitosRoute = AppHabitosRouteImport.update({
+  id: '/habitos',
+  path: '/habitos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLivrosRoute = AppLivrosRouteImport.update({
+  id: '/livros',
+  path: '/livros',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMetasRoute = AppMetasRouteImport.update({
+  id: '/metas',
+  path: '/metas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSeriesRoute = AppSeriesRouteImport.update({
+  id: '/series',
+  path: '/series',
+  getParentRoute: () => AppRoute,
+} as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
 const AppPodcastsIndexRoute = AppPodcastsIndexRouteImport.update({
@@ -126,17 +137,6 @@ const AppPodcastsShowIdRoute = AppPodcastsShowIdRouteImport.update({
   id: '/podcasts/$showId',
   path: '/podcasts/$showId',
   getParentRoute: () => AppRoute,
-} as any)
-const Char91DotmcpChar93InvokeToolToolRoute =
-  Char91DotmcpChar93InvokeToolToolRouteImport.update({
-    id: '/.mcp/invoke-tool/$tool',
-    path: '/.mcp/invoke-tool/$tool',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
-  id: '/.lovable/oauth/consent',
-  path: '/.lovable/oauth/consent',
-  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -290,18 +290,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -311,74 +304,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/series': {
-      id: '/_app/series'
-      path: '/series'
-      fullPath: '/series'
-      preLoaderRoute: typeof AppSeriesRouteImport
-      parentRoute: typeof AppRoute
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_app/metas': {
-      id: '/_app/metas'
-      path: '/metas'
-      fullPath: '/metas'
-      preLoaderRoute: typeof AppMetasRouteImport
-      parentRoute: typeof AppRoute
+    '/.mcp/list-tools': {
+      id: '/.mcp/list-tools'
+      path: '/.mcp/list-tools'
+      fullPath: '/.mcp/list-tools'
+      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_app/livros': {
-      id: '/_app/livros'
-      path: '/livros'
-      fullPath: '/livros'
-      preLoaderRoute: typeof AppLivrosRouteImport
-      parentRoute: typeof AppRoute
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_app/habitos': {
-      id: '/_app/habitos'
-      path: '/habitos'
-      fullPath: '/habitos'
-      preLoaderRoute: typeof AppHabitosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/financas': {
-      id: '/_app/financas'
-      path: '/financas'
-      fullPath: '/financas'
-      preLoaderRoute: typeof AppFinancasRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/filmes': {
-      id: '/_app/filmes'
-      path: '/filmes'
-      fullPath: '/filmes'
-      preLoaderRoute: typeof AppFilmesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/exportar': {
-      id: '/_app/exportar'
-      path: '/exportar'
-      fullPath: '/exportar'
-      preLoaderRoute: typeof AppExportarRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/diario': {
-      id: '/_app/diario'
-      path: '/diario'
-      fullPath: '/diario'
-      preLoaderRoute: typeof AppDiarioRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/dashboard': {
-      id: '/_app/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AppDashboardRouteImport
+    '/_app/agenda': {
+      id: '/_app/agenda'
+      path: '/agenda'
+      fullPath: '/agenda'
+      preLoaderRoute: typeof AppAgendaRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/aniversarios': {
@@ -388,25 +346,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAniversariosRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/agenda': {
-      id: '/_app/agenda'
-      path: '/agenda'
-      fullPath: '/agenda'
-      preLoaderRoute: typeof AppAgendaRouteImport
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
-    '/.well-known/oauth-protected-resource': {
-      id: '/.well-known/oauth-protected-resource'
-      path: '/.well-known/oauth-protected-resource'
-      fullPath: '/.well-known/oauth-protected-resource'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+    '/_app/diario': {
+      id: '/_app/diario'
+      path: '/diario'
+      fullPath: '/diario'
+      preLoaderRoute: typeof AppDiarioRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/exportar': {
+      id: '/_app/exportar'
+      path: '/exportar'
+      fullPath: '/exportar'
+      preLoaderRoute: typeof AppExportarRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/filmes': {
+      id: '/_app/filmes'
+      path: '/filmes'
+      fullPath: '/filmes'
+      preLoaderRoute: typeof AppFilmesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/financas': {
+      id: '/_app/financas'
+      path: '/financas'
+      fullPath: '/financas'
+      preLoaderRoute: typeof AppFinancasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/habitos': {
+      id: '/_app/habitos'
+      path: '/habitos'
+      fullPath: '/habitos'
+      preLoaderRoute: typeof AppHabitosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/livros': {
+      id: '/_app/livros'
+      path: '/livros'
+      fullPath: '/livros'
+      preLoaderRoute: typeof AppLivrosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/metas': {
+      id: '/_app/metas'
+      path: '/metas'
+      fullPath: '/metas'
+      preLoaderRoute: typeof AppMetasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/series': {
+      id: '/_app/series'
+      path: '/series'
+      fullPath: '/series'
+      preLoaderRoute: typeof AppSeriesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/.mcp/list-tools': {
-      id: '/.mcp/list-tools'
-      path: '/.mcp/list-tools'
-      fullPath: '/.mcp/list-tools'
-      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/podcasts/': {
@@ -422,20 +436,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/podcasts/$showId'
       preLoaderRoute: typeof AppPodcastsShowIdRouteImport
       parentRoute: typeof AppRoute
-    }
-    '/.mcp/invoke-tool/$tool': {
-      id: '/.mcp/invoke-tool/$tool'
-      path: '/.mcp/invoke-tool/$tool'
-      fullPath: '/.mcp/invoke-tool/$tool'
-      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.lovable/oauth/consent': {
-      id: '/.lovable/oauth/consent'
-      path: '/.lovable/oauth/consent'
-      fullPath: '/.lovable/oauth/consent'
-      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
-      parentRoute: typeof rootRouteImport
     }
   }
 }
