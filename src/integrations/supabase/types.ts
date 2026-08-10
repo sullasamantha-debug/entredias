@@ -556,6 +556,36 @@ export type Database = {
         }
         Relationships: []
       }
+      list_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+          scope: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+          scope?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          scope?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       movies: {
         Row: {
           created_at: string
@@ -1007,6 +1037,139 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      tasks: {
+        Row: {
+          category: string | null
+          completed_at: string | null
+          created_at: string
+          date: string
+          description: string | null
+          due_date: string | null
+          goal_id: string | null
+          id: string
+          priority: string
+          status: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string
+          date?: string
+          description?: string | null
+          due_date?: string | null
+          goal_id?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string
+          date?: string
+          description?: string | null
+          due_date?: string | null
+          goal_id?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wishes: {
+        Row: {
+          added_date: string
+          category: string | null
+          created_at: string
+          description: string | null
+          estimated_value: number | null
+          goal_id: string | null
+          id: string
+          image_url: string | null
+          link: string | null
+          name: string
+          notes: string | null
+          paid_value: number | null
+          priority: string
+          realized_date: string | null
+          status: string
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+          wish_type: string
+        }
+        Insert: {
+          added_date?: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          estimated_value?: number | null
+          goal_id?: string | null
+          id?: string
+          image_url?: string | null
+          link?: string | null
+          name: string
+          notes?: string | null
+          paid_value?: number | null
+          priority?: string
+          realized_date?: string | null
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+          wish_type?: string
+        }
+        Update: {
+          added_date?: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          estimated_value?: number | null
+          goal_id?: string | null
+          id?: string
+          image_url?: string | null
+          link?: string | null
+          name?: string
+          notes?: string | null
+          paid_value?: number | null
+          priority?: string
+          realized_date?: string | null
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+          wish_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishes_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Target, Plus, Trash2, Check, Trophy } from "lucide-react";
+import { Target, Plus, Trash2, Check, Trophy, Heart, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/metas")({ component: MetasPage });
@@ -26,6 +26,15 @@ function MetasPage() {
     enabled: !!user, queryKey: ["goals", user?.id],
     queryFn: async () => (await supabase.from("goals").select("*").order("created_at", { ascending: false })).data ?? [],
   });
+  const { data: linkedTasks } = useQuery({
+    enabled: !!user, queryKey: ["tasks", user?.id],
+    queryFn: async () => (await supabase.from("tasks").select("id,title,status,goal_id").not("goal_id", "is", null)).data ?? [],
+  });
+  const { data: linkedWishes } = useQuery({
+    enabled: !!user, queryKey: ["wishes", user?.id],
+    queryFn: async () => (await supabase.from("wishes").select("id,name,status,goal_id").not("goal_id", "is", null)).data ?? [],
+  });
+
 
   const save = async () => {
     if (!user || !form.title) return;
@@ -102,6 +111,37 @@ function MetasPage() {
                     <button onClick={() => update(g.id, Number(g.progress) + 1, Number(g.target))} className="rounded-lg border border-border px-3 text-sm hover:bg-accent">+1</button>
                   </div>
                 </div>
+                {(() => {
+                  const gt = (linkedTasks ?? []).filter((t) => t.goal_id === g.id);
+                  const gw = (linkedWishes ?? []).filter((w) => w.goal_id === g.id);
+                  if (!gt.length && !gw.length) return null;
+                  return (
+                    <div className="mt-4 space-y-2 border-t border-border pt-3 text-xs">
+                      {gw.length > 0 && (
+                        <div>
+                          <div className="mb-1 flex items-center gap-1 text-muted-foreground"><Heart className="h-3 w-3" />Desejos</div>
+                          {gw.map((w) => (
+                            <div key={w.id} className={w.status === "realizado" ? "text-muted-foreground line-through" : ""}>
+                              {w.status === "realizado" ? "☑" : "☐"} {w.name}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {gt.length > 0 && (
+                        <div>
+                          <div className="mb-1 flex items-center gap-1 text-muted-foreground"><ListChecks className="h-3 w-3" />Tarefas</div>
+                          {gt.map((t) => (
+                            <div key={t.id} className={t.status === "concluida" ? "text-muted-foreground line-through" : ""}>
+                              {t.status === "concluida" ? "☑" : "☐"} {t.title}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <Link to="/listas" className="inline-block text-primary hover:underline">Abrir Listas →</Link>
+                    </div>
+                  );
+                })()}
+
               </motion.div>
             );
           })}
