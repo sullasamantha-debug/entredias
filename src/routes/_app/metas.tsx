@@ -111,6 +111,37 @@ function MetasPage() {
                     <button onClick={() => update(g.id, Number(g.progress) + 1, Number(g.target))} className="rounded-lg border border-border px-3 text-sm hover:bg-accent">+1</button>
                   </div>
                 </div>
+                {(() => {
+                  const gt = (linkedTasks ?? []).filter((t) => t.goal_id === g.id);
+                  const gw = (linkedWishes ?? []).filter((w) => w.goal_id === g.id);
+                  if (!gt.length && !gw.length) return null;
+                  return (
+                    <div className="mt-4 space-y-2 border-t border-border pt-3 text-xs">
+                      {gw.length > 0 && (
+                        <div>
+                          <div className="mb-1 flex items-center gap-1 text-muted-foreground"><Heart className="h-3 w-3" />Desejos</div>
+                          {gw.map((w) => (
+                            <div key={w.id} className={w.status === "realizado" ? "text-muted-foreground line-through" : ""}>
+                              {w.status === "realizado" ? "☑" : "☐"} {w.name}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {gt.length > 0 && (
+                        <div>
+                          <div className="mb-1 flex items-center gap-1 text-muted-foreground"><ListChecks className="h-3 w-3" />Tarefas</div>
+                          {gt.map((t) => (
+                            <div key={t.id} className={t.status === "concluida" ? "text-muted-foreground line-through" : ""}>
+                              {t.status === "concluida" ? "☑" : "☐"} {t.title}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <Link to="/listas" className="inline-block text-primary hover:underline">Abrir Listas →</Link>
+                    </div>
+                  );
+                })()}
+
               </motion.div>
             );
           })}
