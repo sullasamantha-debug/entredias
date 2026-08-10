@@ -23,6 +23,7 @@ import { Route as AppExportarRouteImport } from './routes/_app/exportar'
 import { Route as AppFilmesRouteImport } from './routes/_app/filmes'
 import { Route as AppFinancasRouteImport } from './routes/_app/financas'
 import { Route as AppHabitosRouteImport } from './routes/_app/habitos'
+import { Route as AppListasRouteImport } from './routes/_app/listas'
 import { Route as AppLivrosRouteImport } from './routes/_app/livros'
 import { Route as AppMetasRouteImport } from './routes/_app/metas'
 import { Route as AppSeriesRouteImport } from './routes/_app/series'
@@ -102,6 +103,11 @@ const AppHabitosRoute = AppHabitosRouteImport.update({
   path: '/habitos',
   getParentRoute: () => AppRoute,
 } as any)
+const AppListasRoute = AppListasRouteImport.update({
+  id: '/listas',
+  path: '/listas',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppLivrosRoute = AppLivrosRouteImport.update({
   id: '/livros',
   path: '/livros',
@@ -153,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/filmes': typeof AppFilmesRoute
   '/financas': typeof AppFinancasRoute
   '/habitos': typeof AppHabitosRoute
+  '/listas': typeof AppListasRoute
   '/livros': typeof AppLivrosRoute
   '/metas': typeof AppMetasRoute
   '/series': typeof AppSeriesRoute
@@ -175,6 +182,7 @@ export interface FileRoutesByTo {
   '/filmes': typeof AppFilmesRoute
   '/financas': typeof AppFinancasRoute
   '/habitos': typeof AppHabitosRoute
+  '/listas': typeof AppListasRoute
   '/livros': typeof AppLivrosRoute
   '/metas': typeof AppMetasRoute
   '/series': typeof AppSeriesRoute
@@ -199,6 +207,7 @@ export interface FileRoutesById {
   '/_app/filmes': typeof AppFilmesRoute
   '/_app/financas': typeof AppFinancasRoute
   '/_app/habitos': typeof AppHabitosRoute
+  '/_app/listas': typeof AppListasRoute
   '/_app/livros': typeof AppLivrosRoute
   '/_app/metas': typeof AppMetasRoute
   '/_app/series': typeof AppSeriesRoute
@@ -223,6 +232,7 @@ export interface FileRouteTypes {
     | '/filmes'
     | '/financas'
     | '/habitos'
+    | '/listas'
     | '/livros'
     | '/metas'
     | '/series'
@@ -245,6 +255,7 @@ export interface FileRouteTypes {
     | '/filmes'
     | '/financas'
     | '/habitos'
+    | '/listas'
     | '/livros'
     | '/metas'
     | '/series'
@@ -268,6 +279,7 @@ export interface FileRouteTypes {
     | '/_app/filmes'
     | '/_app/financas'
     | '/_app/habitos'
+    | '/_app/listas'
     | '/_app/livros'
     | '/_app/metas'
     | '/_app/series'
@@ -388,6 +400,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppHabitosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/listas': {
+      id: '/_app/listas'
+      path: '/listas'
+      fullPath: '/listas'
+      preLoaderRoute: typeof AppListasRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/livros': {
       id: '/_app/livros'
       path: '/livros'
@@ -449,6 +468,7 @@ interface AppRouteChildren {
   AppFilmesRoute: typeof AppFilmesRoute
   AppFinancasRoute: typeof AppFinancasRoute
   AppHabitosRoute: typeof AppHabitosRoute
+  AppListasRoute: typeof AppListasRoute
   AppLivrosRoute: typeof AppLivrosRoute
   AppMetasRoute: typeof AppMetasRoute
   AppSeriesRoute: typeof AppSeriesRoute
@@ -465,6 +485,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFilmesRoute: AppFilmesRoute,
   AppFinancasRoute: AppFinancasRoute,
   AppHabitosRoute: AppHabitosRoute,
+  AppListasRoute: AppListasRoute,
   AppLivrosRoute: AppLivrosRoute,
   AppMetasRoute: AppMetasRoute,
   AppSeriesRoute: AppSeriesRoute,
