@@ -35,8 +35,8 @@ type Row = {
   toAccountId: string;
 };
 
-export function OFXImportButton({ account, accounts, cats }:
-  { account: Account; accounts: Account[]; cats: Cat[] }) {
+export function OFXImportButton({ account, accounts, cats, asItem = false }:
+  { account: Account; accounts: Account[]; cats: Cat[]; asItem?: boolean }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
