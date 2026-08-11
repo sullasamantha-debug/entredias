@@ -35,8 +35,8 @@ type Row = {
   toAccountId: string;
 };
 
-export function OFXImportButton({ account, accounts, cats }:
-  { account: Account; accounts: Account[]; cats: Cat[] }) {
+export function OFXImportButton({ account, accounts, cats, asItem = false }:
+  { account: Account; accounts: Account[]; cats: Cat[]; asItem?: boolean }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -147,9 +147,9 @@ export function OFXImportButton({ account, accounts, cats }:
     try {
       // Create import record first
       const { data: imp, error: iErr } = await (supabase as any).from("ofx_imports").insert({
-        user_id: user.id, account_id: account.id, file_name: fileName,
+        user_id: user.id, account_id: account.id, file_name: fileName, source_type: "ofx",
         period_start: period.start, period_end: period.end,
-        imported_count: 0, skipped_count: ignoredCount, duplicate_count: dupCount,
+        found_count: rows.length, imported_count: 0, skipped_count: ignoredCount, duplicate_count: dupCount,
       }).select("id").single();
       if (iErr || !imp) { toast.error(iErr?.message ?? "Falha ao registrar importação."); setBusy(false); return; }
 
@@ -229,13 +229,19 @@ export function OFXImportButton({ account, accounts, cats }:
   return (
     <>
       <input ref={fileRef} type="file" accept=".ofx,.OFX,text/plain" className="hidden" onChange={onFile} />
-      <button
-        onClick={pickFile}
-        className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"
-        title="Importar extrato OFX"
-      >
-        <Upload className="h-4 w-4" />
-      </button>
+      {asItem ? (
+        <button onClick={pickFile} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-accent">
+          <FileText className="h-4 w-4 text-primary" /> Importar OFX
+        </button>
+      ) : (
+        <button
+          onClick={pickFile}
+          className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"
+          title="Importar extrato OFX"
+        >
+          <Upload className="h-4 w-4" />
+        </button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[92vh] max-w-5xl overflow-y-auto">
@@ -348,6 +354,7 @@ type ImportRow = {
   id: string; account_id: string | null; card_id: string | null; file_name: string | null;
   period_start: string | null; period_end: string | null;
   imported_count: number; skipped_count: number; duplicate_count: number;
+  source_type?: string | null; found_count?: number | null;
   created_at: string;
 };
 
@@ -386,13 +393,19 @@ export function OFXImportsHistory({ accounts, cards = [] }: { accounts: Account[
         {list.map(imp => (
           <div key={imp.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-accent/40 p-3 text-sm">
             <div className="min-w-0 flex-1">
-              <div className="truncate font-medium">{imp.file_name ?? "(sem nome)"}</div>
+              <div className="flex items-center gap-2">
+                <span className="truncate font-medium">{imp.file_name ?? "(sem nome)"}</span>
+                <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] uppercase text-primary">
+                  {(imp.source_type ?? "ofx").toUpperCase()}
+                </span>
+              </div>
               <div className="text-xs text-muted-foreground">
                 {formatDateBR(imp.created_at.slice(0, 10))} · {imp.card_id ? `💳 ${cardName(imp.card_id)}` : accName(imp.account_id)}
                 {imp.period_start && imp.period_end && ` · ${formatDateBR(imp.period_start)}—${formatDateBR(imp.period_end)}`}
               </div>
             </div>
             <div className="flex items-center gap-3 text-xs">
+              {!!imp.found_count && <span className="text-muted-foreground">{imp.found_count} encontradas</span>}
               <span className="text-emerald-700">{imp.imported_count} importadas</span>
               <span className="text-muted-foreground">{imp.skipped_count} ignoradas</span>
               <span className="text-amber-700">{imp.duplicate_count} duplicadas</span>
@@ -546,9 +559,9 @@ export function OFXCardImportButton({ card, cats }: { card: CardT; cats: Cat[] }
     setBusy(true);
     try {
       const { data: imp, error: iErr } = await (supabase as any).from("ofx_imports").insert({
-        user_id: user.id, card_id: card.id, file_name: fileName,
+        user_id: user.id, card_id: card.id, file_name: fileName, source_type: "ofx",
         period_start: period.start, period_end: period.end,
-        imported_count: 0, skipped_count: ignoredCount, duplicate_count: dupCount,
+        found_count: rows.length, imported_count: 0, skipped_count: ignoredCount, duplicate_count: dupCount,
       }).select("id").single();
       if (iErr || !imp) { toast.error(iErr?.message ?? "Falha ao registrar importação."); setBusy(false); return; }
 

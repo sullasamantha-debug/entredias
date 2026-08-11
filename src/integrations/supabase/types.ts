@@ -668,11 +668,13 @@ export type Database = {
           created_at: string
           duplicate_count: number
           file_name: string | null
+          found_count: number
           id: string
           imported_count: number
           period_end: string | null
           period_start: string | null
           skipped_count: number
+          source_type: string
           user_id: string
         }
         Insert: {
@@ -681,11 +683,13 @@ export type Database = {
           created_at?: string
           duplicate_count?: number
           file_name?: string | null
+          found_count?: number
           id?: string
           imported_count?: number
           period_end?: string | null
           period_start?: string | null
           skipped_count?: number
+          source_type?: string
           user_id: string
         }
         Update: {
@@ -694,11 +698,13 @@ export type Database = {
           created_at?: string
           duplicate_count?: number
           file_name?: string | null
+          found_count?: number
           id?: string
           imported_count?: number
           period_end?: string | null
           period_start?: string | null
           skipped_count?: number
+          source_type?: string
           user_id?: string
         }
         Relationships: [

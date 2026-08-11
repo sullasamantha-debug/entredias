@@ -21,7 +21,8 @@ import {
 import { toast } from "sonner";
 import { formatDateBR, localDateKey } from "@/lib/dates";
 import { fmtBRL, monthKey, addMonth, labelMonth, invoiceMonthFor, dueDateOf, daysUntil } from "@/lib/finance";
-import { OFXImportButton, OFXImportsHistory, OFXCardImportButton } from "@/components/OFXImport";
+import { OFXImportsHistory, OFXCardImportButton } from "@/components/OFXImport";
+import { ImportStatementMenu } from "@/components/PDFImport";
 
 export const Route = createFileRoute("/_app/financas")({ component: FinancasPage });
 
@@ -213,7 +214,7 @@ function FinancasPage() {
         </div>
 
         <TabsContent value="overview"><Overview fins={finList} budgets={budgets ?? []} cards={cards ?? []} accounts={accountList} jars={jars ?? []} invs={invs ?? []} accountsTotal={accountsTotal} totalJars={totalJars} totalInvs={totalInvs} futureCardExpense={futureCardExpense} patrimony={patrimony} today={today} /></TabsContent>
-        <TabsContent value="accounts"><AccountsTab accounts={accountList} fins={finList} jars={jars ?? []} today={today} cats={cats ?? []} /></TabsContent>
+        <TabsContent value="accounts"><AccountsTab accounts={accountList} fins={finList} jars={jars ?? []} today={today} cats={cats ?? []} cards={cards ?? []} /></TabsContent>
         <TabsContent value="tx"><Transactions fins={finList} cards={cards ?? []} accounts={accountList} cats={cats ?? []} budgets={budgets ?? []} /></TabsContent>
         <TabsContent value="cards"><CardsTab cards={cards ?? []} fins={finList} accounts={accountList} cats={cats ?? []} /></TabsContent>
         <TabsContent value="jars"><Jars jars={jars ?? []} accounts={accountList} /></TabsContent>
@@ -396,7 +397,7 @@ function Overview({ fins, budgets, cards, accounts, jars, invs, accountsTotal, t
 
 // ============================================================
 // ACCOUNTS
-function AccountsTab({ accounts, fins, jars, today, cats }: { accounts: Account[]; fins: Fin[]; jars: Jar[]; today: string; cats: Cat[] }) {
+function AccountsTab({ accounts, fins, jars, today, cats, cards = [] }: { accounts: Account[]; fins: Fin[]; jars: Jar[]; today: string; cats: Cat[]; cards?: Card[] }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -488,7 +489,7 @@ function AccountsTab({ accounts, fins, jars, today, cats }: { accounts: Account[
                     </div>
                   </div>
                   <div className="flex gap-1">
-                    <OFXImportButton account={ac} accounts={accounts} cats={cats} />
+                    <ImportStatementMenu account={ac} accounts={accounts} cats={cats} cards={cards} />
                     <button onClick={() => { setEditing(ac); setOpen(true); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"><Pencil className="h-4 w-4" /></button>
                     <button onClick={() => setConfirmId(ac.id)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
                   </div>
@@ -525,7 +526,7 @@ function AccountsTab({ accounts, fins, jars, today, cats }: { accounts: Account[
       )}
       <ConfirmDialog open={!!confirmId} onOpenChange={(o) => !o && setConfirmId(null)} onConfirm={remove}
         title="Excluir conta?" description="As transações associadas continuarão registradas, mas ficarão sem conta vinculada." />
-      <OFXImportsHistory accounts={accounts} />
+      <OFXImportsHistory accounts={accounts} cards={cards} />
     </div>
   );
 }
