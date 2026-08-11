@@ -229,13 +229,19 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
   return (
     <>
       <input ref={fileRef} type="file" accept=".ofx,.OFX,text/plain" className="hidden" onChange={onFile} />
-      <button
-        onClick={pickFile}
-        className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"
-        title="Importar extrato OFX"
-      >
-        <Upload className="h-4 w-4" />
-      </button>
+      {asItem ? (
+        <button onClick={pickFile} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-accent">
+          <FileText className="h-4 w-4 text-primary" /> Importar OFX
+        </button>
+      ) : (
+        <button
+          onClick={pickFile}
+          className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"
+          title="Importar extrato OFX"
+        >
+          <Upload className="h-4 w-4" />
+        </button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[92vh] max-w-5xl overflow-y-auto">
