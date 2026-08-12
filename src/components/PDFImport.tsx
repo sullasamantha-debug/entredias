@@ -13,10 +13,16 @@ import { formatDateBR } from "@/lib/dates";
 import { suggestCategory, memoPattern, type SuggestionRule } from "@/lib/ofx";
 import { extractPdfLines, parsePdfStatement, type PdfTx } from "@/lib/pdf-statement";
 import { OFXImportButton } from "@/components/OFXImport";
+import {
+  detectApplication, resolveTargets, applyPatrimonyEffects, patLabelFor,
+  isJarKind, isOutflowKind, NEW_TARGET, PAT_KINDS, type PatKind,
+} from "@/lib/patrimony";
 
 type Cat = { id: string; name: string; type: "receita" | "despesa" | "reserva" | "investimento"; archived: boolean };
 type Account = { id: string; name: string };
 type CardT = { id: string; name: string; closing_day: number; due_day: number };
+type JarT = { id: string; name: string };
+type InvT = { id: string; name: string };
 
 type Kind = "income" | "expense" | "transfer" | "jar_deposit" | "jar_withdraw" | "invest_in" | "invest_out" | "card_payment";
 
@@ -33,6 +39,9 @@ type Row = {
   toAccountId: string;
   cardId: string;
   invoiceMonth: string;
+  targetId: string;
+  newName: string;
+  appHint: boolean;
   ignore: boolean;
   duplicate: boolean;
   duplicateId: string | null;
@@ -41,6 +50,7 @@ type Row = {
 
 const TRANSFER_KINDS: Kind[] = ["transfer", "jar_deposit", "jar_withdraw", "invest_in", "invest_out"];
 const CARD_PAY_RE = /pagamento\s+(de\s+)?fatura|pgto\.?\s*fatura|pagto\s*cart[aã]o|pagamento\s+cart[aã]o|fatura\s+cart[aã]o/i;
+
 
 export function PDFImportButton({ account, accounts, cats, cards = [], asItem = false }:
   { account: Account; accounts: Account[]; cats: Cat[]; cards?: CardT[]; asItem?: boolean }) {
