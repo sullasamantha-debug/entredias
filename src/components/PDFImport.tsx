@@ -113,7 +113,10 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
         const s = suggestCategory(t.description, t.type, learned);
         const isCardPay = CARD_PAY_RE.test(t.description);
         const hit = byDateAmt.get(`${t.date}|${t.amount.toFixed(2)}`);
-        const kind: Kind = isCardPay && cards.length ? "card_payment" : t.type === "CREDIT" ? "income" : "expense";
+        const app = detectApplication(t.description, t.type);
+        const baseKind: Kind = isCardPay && cards.length ? "card_payment" : t.type === "CREDIT" ? "income" : "expense";
+        const kind: Kind = !isCardPay && app.suggested ? app.suggested : baseKind;
+        const isPat = PAT_KINDS.includes(kind as PatKind);
         return {
           date: t.date,
           description: t.description,
@@ -122,11 +125,14 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
           type: t.type,
           balanceAfter: t.balanceAfter,
           doc: t.doc,
-          category: kind === "card_payment" ? "pagamento de fatura" : (s.category ?? ""),
+          category: kind === "card_payment" ? "pagamento de fatura" : isPat ? "transferência patrimonial" : (s.category ?? ""),
           kind,
           toAccountId: "",
           cardId: kind === "card_payment" ? (cards[0]?.id ?? "") : "",
           invoiceMonth: monthKey(new Date(`${t.date}T12:00:00`)),
+          targetId: "",
+          newName: "",
+          appHint: app.isApplication && !isCardPay,
           ignore: false,
           duplicate: !!hit,
           duplicateId: hit?.id ?? null,
@@ -150,9 +156,12 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
     updateRow(i, {
       kind,
       cardId: kind === "card_payment" ? (r.cardId || cards[0]?.id || "") : "",
+      targetId: "",
+      newName: "",
       category: TRANSFER_KINDS.includes(kind) ? "transferência patrimonial" : kind === "card_payment" ? "pagamento de fatura" : "",
     });
   };
+
 
   const selected = rows.filter(r => !r.ignore && !(r.duplicate && r.duplicateAction === "skip"));
   const dupCount = rows.filter(r => r.duplicate).length;
