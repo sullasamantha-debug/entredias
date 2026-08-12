@@ -13,10 +13,16 @@ import { formatDateBR } from "@/lib/dates";
 import { suggestCategory, memoPattern, type SuggestionRule } from "@/lib/ofx";
 import { extractPdfLines, parsePdfStatement, type PdfTx } from "@/lib/pdf-statement";
 import { OFXImportButton } from "@/components/OFXImport";
+import {
+  detectApplication, resolveTargets, applyPatrimonyEffects, patLabelFor,
+  isJarKind, isOutflowKind, NEW_TARGET, PAT_KINDS, type PatKind,
+} from "@/lib/patrimony";
 
 type Cat = { id: string; name: string; type: "receita" | "despesa" | "reserva" | "investimento"; archived: boolean };
 type Account = { id: string; name: string };
 type CardT = { id: string; name: string; closing_day: number; due_day: number };
+type JarT = { id: string; name: string };
+type InvT = { id: string; name: string };
 
 type Kind = "income" | "expense" | "transfer" | "jar_deposit" | "jar_withdraw" | "invest_in" | "invest_out" | "card_payment";
 
@@ -33,6 +39,9 @@ type Row = {
   toAccountId: string;
   cardId: string;
   invoiceMonth: string;
+  targetId: string;
+  newName: string;
+  appHint: boolean;
   ignore: boolean;
   duplicate: boolean;
   duplicateId: string | null;
@@ -41,6 +50,7 @@ type Row = {
 
 const TRANSFER_KINDS: Kind[] = ["transfer", "jar_deposit", "jar_withdraw", "invest_in", "invest_out"];
 const CARD_PAY_RE = /pagamento\s+(de\s+)?fatura|pgto\.?\s*fatura|pagto\s*cart[aã]o|pagamento\s+cart[aã]o|fatura\s+cart[aã]o/i;
+
 
 export function PDFImportButton({ account, accounts, cats, cards = [], asItem = false }:
   { account: Account; accounts: Account[]; cats: Cat[]; cards?: CardT[]; asItem?: boolean }) {
@@ -59,6 +69,17 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
     queryKey: ["ofx_category_rules", user?.id],
     queryFn: async () => (((await (supabase as any).from("ofx_category_rules").select("pattern, category, cat_type")).data) ?? []) as SuggestionRule[],
   });
+  const { data: jars } = useQuery({
+    enabled: !!user,
+    queryKey: ["jars", user?.id],
+    queryFn: async () => ((await supabase.from("savings_jars").select("id, name").order("name")).data ?? []) as JarT[],
+  });
+  const { data: invs } = useQuery({
+    enabled: !!user,
+    queryKey: ["investments", user?.id],
+    queryFn: async () => ((await supabase.from("investments").select("id, name").order("name")).data ?? []) as InvT[],
+  });
+
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -92,7 +113,10 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
         const s = suggestCategory(t.description, t.type, learned);
         const isCardPay = CARD_PAY_RE.test(t.description);
         const hit = byDateAmt.get(`${t.date}|${t.amount.toFixed(2)}`);
-        const kind: Kind = isCardPay && cards.length ? "card_payment" : t.type === "CREDIT" ? "income" : "expense";
+        const app = detectApplication(t.description, t.type);
+        const baseKind: Kind = isCardPay && cards.length ? "card_payment" : t.type === "CREDIT" ? "income" : "expense";
+        const kind: Kind = !isCardPay && app.suggested ? app.suggested : baseKind;
+        const isPat = PAT_KINDS.includes(kind as PatKind);
         return {
           date: t.date,
           description: t.description,
@@ -101,11 +125,14 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
           type: t.type,
           balanceAfter: t.balanceAfter,
           doc: t.doc,
-          category: kind === "card_payment" ? "pagamento de fatura" : (s.category ?? ""),
+          category: kind === "card_payment" ? "pagamento de fatura" : isPat ? "transferência patrimonial" : (s.category ?? ""),
           kind,
           toAccountId: "",
           cardId: kind === "card_payment" ? (cards[0]?.id ?? "") : "",
           invoiceMonth: monthKey(new Date(`${t.date}T12:00:00`)),
+          targetId: "",
+          newName: "",
+          appHint: app.isApplication && !isCardPay,
           ignore: false,
           duplicate: !!hit,
           duplicateId: hit?.id ?? null,
@@ -129,9 +156,12 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
     updateRow(i, {
       kind,
       cardId: kind === "card_payment" ? (r.cardId || cards[0]?.id || "") : "",
+      targetId: "",
+      newName: "",
       category: TRANSFER_KINDS.includes(kind) ? "transferência patrimonial" : kind === "card_payment" ? "pagamento de fatura" : "",
     });
   };
+
 
   const selected = rows.filter(r => !r.ignore && !(r.duplicate && r.duplicateAction === "skip"));
   const dupCount = rows.filter(r => r.duplicate).length;

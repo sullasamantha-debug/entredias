@@ -517,6 +517,57 @@ export type Database = {
         }
         Relationships: []
       }
+      investment_movements: {
+        Row: {
+          account_id: string | null
+          amount: number
+          created_at: string
+          date: string
+          id: string
+          investment_id: string
+          kind: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          created_at?: string
+          date: string
+          id?: string
+          investment_id: string
+          kind: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string
+          date?: string
+          id?: string
+          investment_id?: string
+          kind?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investment_movements_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investment_movements_investment_id_fkey"
+            columns: ["investment_id"]
+            isOneToOne: false
+            referencedRelation: "investments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       investments: {
         Row: {
           category: string | null
@@ -962,6 +1013,7 @@ export type Database = {
       }
       savings_movements: {
         Row: {
+          account_id: string | null
           amount: number
           created_at: string
           date: string
@@ -972,6 +1024,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          account_id?: string | null
           amount?: number
           created_at?: string
           date?: string
@@ -982,6 +1035,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          account_id?: string | null
           amount?: number
           created_at?: string
           date?: string
@@ -991,7 +1045,15 @@ export type Database = {
           notes?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "savings_movements_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       series: {
         Row: {
