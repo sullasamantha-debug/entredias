@@ -69,6 +69,17 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
     queryKey: ["ofx_category_rules", user?.id],
     queryFn: async () => (((await (supabase as any).from("ofx_category_rules").select("pattern, category, cat_type")).data) ?? []) as SuggestionRule[],
   });
+  const { data: jars } = useQuery({
+    enabled: !!user,
+    queryKey: ["jars", user?.id],
+    queryFn: async () => ((await supabase.from("savings_jars").select("id, name").order("name")).data ?? []) as JarT[],
+  });
+  const { data: invs } = useQuery({
+    enabled: !!user,
+    queryKey: ["investments", user?.id],
+    queryFn: async () => ((await supabase.from("investments").select("id, name").order("name")).data ?? []) as InvT[],
+  });
+
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
