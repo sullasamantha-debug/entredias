@@ -14,9 +14,10 @@ import { suggestCategory, memoPattern, type SuggestionRule } from "@/lib/ofx";
 import { extractPdfLines, parsePdfStatement, type PdfTx } from "@/lib/pdf-statement";
 import { OFXImportButton } from "@/components/OFXImport";
 import {
-  detectApplication, resolveTargets, applyPatrimonyEffects, patLabelFor,
-  isJarKind, isOutflowKind, NEW_TARGET, PAT_KINDS, type PatKind,
+  detectApplication, resolveTargets, applyPatrimonyEffects, patLabelFor, patFinanceRow, patFlowLabel,
+  isJarKind, isOutflowKind, NEW_TARGET, PAT_KINDS, type PatKind, type EffectItem,
 } from "@/lib/patrimony";
+
 
 type Cat = { id: string; name: string; type: "receita" | "despesa" | "reserva" | "investimento"; archived: boolean };
 type Account = { id: string; name: string };
