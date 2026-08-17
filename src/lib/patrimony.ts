@@ -43,6 +43,37 @@ export function patLabelFor(kind: PatKind, targetName: string) {
   return `${isDeposit ? "Aporte" : "Resgate"} em ${what} "${targetName}"`;
 }
 
+/** Caminho do dinheiro: conta → destino (aporte) ou destino → conta (resgate). */
+export function patFlowLabel(kind: PatKind, targetName: string, accountName: string | null) {
+  const target = `${isJarKind(kind) ? "Reserva" : "Investimento"} ${targetName}`;
+  const acc = accountName ?? "Conta";
+  return isOutflowKind(kind) ? `${acc} → ${target}` : `${target} → ${acc}`;
+}
+
+/** Linha do extrato (transferência patrimonial) de um aporte/resgate. */
+export function patFinanceRow(
+  userId: string,
+  args: { kind: PatKind; amount: number; date: string; accountId: string | null; targetName: string; notes?: string | null; importId?: string | null },
+) {
+  const outflow = isOutflowKind(args.kind);
+  return {
+    user_id: userId,
+    kind: "transfer",
+    amount: args.amount,
+    category: "transferência patrimonial",
+    description: patLabelFor(args.kind, args.targetName),
+    date: args.date,
+    payment_method: "transferência",
+    installments: 1,
+    paid: true,
+    account_id: outflow ? args.accountId : null,
+    to_account_id: outflow ? null : args.accountId,
+    notes: args.notes ?? null,
+    ...(args.importId ? { ofx_import_id: args.importId } : {}),
+  };
+}
+
+
 export const NEW_TARGET = "__new__";
 
 export type Resolved = { kind: PatKind; targetId: string; targetName: string; isJar: boolean };

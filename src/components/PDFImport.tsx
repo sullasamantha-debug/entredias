@@ -14,9 +14,10 @@ import { suggestCategory, memoPattern, type SuggestionRule } from "@/lib/ofx";
 import { extractPdfLines, parsePdfStatement, type PdfTx } from "@/lib/pdf-statement";
 import { OFXImportButton } from "@/components/OFXImport";
 import {
-  detectApplication, resolveTargets, applyPatrimonyEffects, patLabelFor,
-  isJarKind, isOutflowKind, NEW_TARGET, PAT_KINDS, type PatKind,
+  detectApplication, resolveTargets, applyPatrimonyEffects, patLabelFor, patFinanceRow, patFlowLabel,
+  isJarKind, isOutflowKind, NEW_TARGET, PAT_KINDS, type PatKind, type EffectItem,
 } from "@/lib/patrimony";
+
 
 type Cat = { id: string; name: string; type: "receita" | "despesa" | "reserva" | "investimento"; archived: boolean };
 type Account = { id: string; name: string };
@@ -170,8 +171,24 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
 
   const runImport = async () => {
     if (!user) return;
+
+    const patRows = selected.filter(r => PAT_KINDS.includes(r.kind as PatKind));
+    const missingTarget = patRows.some(r => !r.targetId || (r.targetId === NEW_TARGET && !r.newName.trim()));
+    if (missingTarget) {
+      toast.error("Escolha a reserva ou o investimento de destino nas linhas de aporte/resgate.");
+      return;
+    }
+
     setBusy(true);
     try {
+      const resolved = await resolveTargets(
+        user.id,
+        selected.map(r => PAT_KINDS.includes(r.kind as PatKind)
+          ? { kind: r.kind as PatKind, targetId: r.targetId, newName: r.newName }
+          : null),
+        { jars: jars ?? [], invs: invs ?? [] },
+      );
+
       const { data: imp, error: iErr } = await (supabase as any).from("ofx_imports").insert({
         user_id: user.id, account_id: account.id, file_name: fileName, source_type: "pdf",
         period_start: meta.start, period_end: meta.end,
@@ -183,32 +200,43 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
       const toUpdate: { id: string; patch: any }[] = [];
       const invoicesToSettle: { cardId: string; month: string }[] = [];
       const learnPatterns = new Map<string, { category: string; cat_type: string }>();
+      const effects: EffectItem[] = [];
 
-      for (const r of selected) {
+      for (let idx = 0; idx < selected.length; idx++) {
+        const r = selected[idx];
+        const res = resolved[idx];
         const isTransferKind = TRANSFER_KINDS.includes(r.kind);
         const isCardPayment = r.kind === "card_payment";
         const kindStored = r.kind === "income" ? "income" : r.kind === "expense" ? "expense" : "transfer";
         const category = isTransferKind ? "transferência patrimonial" : isCardPayment ? "pagamento de fatura" : (r.category || null);
         const notes = [r.doc ? `Doc: ${r.doc}` : null, "Importado de PDF"].filter(Boolean).join(" · ");
-        const row = {
-          user_id: user.id,
-          kind: kindStored,
-          amount: r.amount,
-          category,
-          description: r.description || null,
-          date: r.date,
-          payment_method: kindStored === "transfer" ? "transferência" : "débito",
-          installments: 1,
-          notes,
-          paid: true,
-          account_id: account.id,
-          to_account_id: r.kind === "transfer" ? (r.toAccountId || null) : null,
-          ofx_import_id: imp.id,
-        };
+        const row = res
+          ? patFinanceRow(user.id, {
+              kind: res.kind, amount: r.amount, date: r.date, accountId: account.id,
+              targetName: res.targetName, notes: `${notes} · ${patFlowLabel(res.kind, res.targetName, account.name)}`,
+              importId: imp.id,
+            })
+          : {
+              user_id: user.id,
+              kind: kindStored,
+              amount: r.amount,
+              category,
+              description: r.description || null,
+              date: r.date,
+              payment_method: kindStored === "transfer" ? "transferência" : "débito",
+              installments: 1,
+              notes,
+              paid: true,
+              account_id: account.id,
+              to_account_id: r.kind === "transfer" ? (r.toAccountId || null) : null,
+              ofx_import_id: imp.id,
+            };
         if (r.duplicate && r.duplicateAction === "update" && r.duplicateId) {
           toUpdate.push({ id: r.duplicateId, patch: row });
+          if (res) effects.push({ res, amount: r.amount, date: r.date, accountId: account.id, accountName: account.name });
         } else if (!r.duplicate || r.duplicateAction === "import") {
           toInsert.push(row);
+          if (res) effects.push({ res, amount: r.amount, date: r.date, accountId: account.id, accountName: account.name });
           if (!isTransferKind && !isCardPayment && r.category) {
             const p = memoPattern(r.memo);
             if (p && !learnPatterns.has(p)) learnPatterns.set(p, { category: r.category, cat_type: r.type === "CREDIT" ? "receita" : "despesa" });
@@ -222,6 +250,9 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
         if (error) { toast.error(error.message); return; }
       }
       for (const u of toUpdate) await supabase.from("finances").update(u.patch).eq("id", u.id);
+
+      // Aportes/resgates: atualizam reservas e investimentos e gravam o histórico
+      await applyPatrimonyEffects(user.id, effects);
 
       // Settle the corresponding credit-card invoices (no new expense is created)
       for (const inv of invoicesToSettle) {
@@ -239,14 +270,14 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
       toast.success(`${toInsert.length + toUpdate.length} movimentações importadas do PDF.`);
       setOpen(false);
       setRows([]);
-      qc.invalidateQueries({ queryKey: ["finances"] });
-      qc.invalidateQueries({ queryKey: ["ofx_imports"] });
-      qc.invalidateQueries({ queryKey: ["ofx_category_rules"] });
-      qc.invalidateQueries({ queryKey: ["budgets"] });
+      for (const key of ["finances", "ofx_imports", "ofx_category_rules", "budgets", "jars", "investments", "savings_movements", "investment_movements", "accounts"]) {
+        qc.invalidateQueries({ queryKey: [key] });
+      }
     } finally {
       setBusy(false);
     }
   };
+
 
   return (
     <>
@@ -353,8 +384,27 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
                             })}
                           </select>
                         </div>
+                      ) : isPatKind ? (
+                        <div className="space-y-1">
+                          <select value={r.targetId} onChange={e => updateRow(i, { targetId: e.target.value, newName: "" })}
+                            className={`h-8 w-full rounded-md border bg-background px-2 text-xs ${r.targetId ? "border-input" : "border-amber-400"}`}>
+                            <option value="">{isJarKind(r.kind as PatKind) ? "Reserva…" : "Investimento…"}</option>
+                            {(isJarKind(r.kind as PatKind) ? (jars ?? []) : (invs ?? [])).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                            <option value={NEW_TARGET}>+ Criar nova…</option>
+                          </select>
+                          {r.targetId === NEW_TARGET && (
+                            <Input value={r.newName} onChange={e => updateRow(i, { newName: e.target.value })}
+                              placeholder={isJarKind(r.kind as PatKind) ? "Nome da reserva" : "Nome do investimento"} className="h-7 text-xs" />
+                          )}
+                          <div className="text-[10px] text-muted-foreground">
+                            {r.targetId
+                              ? patFlowLabel(r.kind as PatKind, r.targetId === NEW_TARGET ? (r.newName || "novo") : ((isJarKind(r.kind as PatKind) ? jars : invs)?.find(t => t.id === r.targetId)?.name ?? "destino"), account.name)
+                              : "Escolha o destino para importar esta linha."}
+                          </div>
+                        </div>
                       ) : isTransferKind ? (
                         <div className="text-[11px] text-muted-foreground">Transferência patrimonial</div>
+
                       ) : (
                         <select value={r.category} onChange={e => updateRow(i, { category: e.target.value })}
                           className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs">
