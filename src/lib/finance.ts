@@ -40,3 +40,50 @@ export function daysUntil(dateStr: string) {
   const target = parseDateOnly(dateStr);
   return Math.round((target.getTime() - today.getTime()) / 86400000);
 }
+
+// ---------------------------------------------------------------
+// Saldo real por conta ao final de cada dia
+export type BalanceAccount = { id: string; initial_balance: number; initial_balance_date: string | null };
+export type BalanceFin = {
+  kind: string; amount: number; date: string; paid: boolean;
+  account_id: string | null; to_account_id: string | null;
+};
+export type DayBalance = { per: Record<string, number>; total: number };
+
+/**
+ * Saldo real de cada conta ao final de cada dia com movimentação.
+ * Usa SEMPRE a lista completa de lançamentos (sem filtros de tela), para que o
+ * saldo do dia represente o saldo verdadeiro da conta.
+ */
+export function dailyBalances(accounts: BalanceAccount[], fins: BalanceFin[]): Map<string, DayBalance> {
+  const per: Record<string, number> = {};
+  for (const a of accounts) per[a.id] = Number(a.initial_balance) || 0;
+  const since = new Map(accounts.map(a => [a.id, a.initial_balance_date || "0000-01-01"]));
+
+  const byDate = new Map<string, BalanceFin[]>();
+  for (const f of fins) {
+    const arr = byDate.get(f.date) ?? [];
+    arr.push(f);
+    byDate.set(f.date, arr);
+  }
+  const dates = Array.from(byDate.keys()).sort();
+  const out = new Map<string, DayBalance>();
+
+  for (const date of dates) {
+    for (const f of byDate.get(date)!) {
+      const amt = Number(f.amount) || 0;
+      const outId = f.account_id;
+      const inId = f.to_account_id;
+      if (f.kind === "income" && outId && per[outId] !== undefined && date >= (since.get(outId) ?? "")) per[outId] += amt;
+      else if (f.kind === "expense" && f.paid && outId && per[outId] !== undefined && date >= (since.get(outId) ?? "")) per[outId] -= amt;
+      else if (f.kind === "transfer") {
+        if (outId && per[outId] !== undefined && date >= (since.get(outId) ?? "")) per[outId] -= amt;
+        if (inId && per[inId] !== undefined && date >= (since.get(inId) ?? "")) per[inId] += amt;
+      }
+    }
+    const snapshot = { ...per };
+    out.set(date, { per: snapshot, total: Object.values(snapshot).reduce((a, b) => a + b, 0) });
+  }
+  return out;
+}
+
