@@ -1,38 +1,39 @@
-## Contexto
+# Finanças: aplicações/resgates + saldo diário no extrato (continuação)
 
-O erro **"Failed to fetch"** no login é causado pelo proxy de fetch do **ambiente Preview da Lovable** (`lovable.js`), que intercepta a requisição `POST /auth/v1/token?grant_type=password` do Supabase Auth e a quebra. Não é um bug do código, do Supabase, do CORS, nem das variáveis de ambiente.
+A base já existe: detecção de aplicações/resgates (`src/lib/patrimony.ts`), tabela de histórico de investimentos com vínculo de conta, e a importação de PDF já marca cada linha com "possível aplicação" e permite escolher o tipo (aporte/resgate em reserva ou investimento). Falta fechar o ciclo: gravar os efeitos, mostrar origem/destino no extrato, e o saldo do dia.
 
-**Provas:**
-- Logs de auth do Supabase mostram logins 200 OK para o usuário (`sullasamantha@gmail.com`, 2026-06-08 10:11:41).
-- `.env` tem `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` corretos.
-- Cliente em `src/integrations/supabase/client.ts` é o auto-gerado padrão.
-- Login não usa server functions nem rotas customizadas → não há superfície para erro de CORS do nosso lado.
+## 1. Concluir a importação (PDF e OFX)
 
-**Validação:** o login funciona normalmente em https://entredias.lovable.app/login (URL publicada, sem proxy).
+- Na tela de conferência, quando a linha for aporte/resgate, exibir um seletor de destino: reservas e investimentos já cadastrados, ou "criar novo" com o nome digitado. Aviso visível quando o destino ainda não foi escolhido (a linha não é importada como aplicação sem destino).
+- Ao confirmar a importação:
+  - criar/resolver o destino escolhido;
+  - lançar a movimentação na conta como **Transferência patrimonial** (saída no aporte, entrada no resgate) — sem entrar em receita nem despesa;
+  - atualizar o saldo da reserva ou do investimento;
+  - gravar no histórico da reserva/investimento o valor, a data e a conta de origem/destino;
+  - descrição padronizada: `Aporte em Reserva "Viagem"` / `Resgate em Investimento "CDB Inter"`.
+- Aplicar exatamente o mesmo comportamento na importação OFX, para os dois caminhos ficarem idênticos.
+- Recalcular tudo após importar (contas, reservas, investimentos, patrimônio, orçamento).
 
-Como não dá para "consertar" o proxy do preview pelo código, o plano foca em **melhorar a experiência de erro** para o usuário entender o que aconteceu quando rodar no preview.
+## 2. Extrato: origem, destino e classificação
 
-## Mudanças
+- Linhas de aplicação/resgate ganham etiqueta **Aplicação** + **Transferência patrimonial**, e mostram o caminho do dinheiro: `Itaú → Reserva Viagem` (aporte) ou `Reserva Viagem → Itaú` (resgate).
+- Aporte/resgate feito manualmente na tela de Reservas ou Investimentos passa a registrar a mesma linha no extrato da conta escolhida, com o mesmo formato — hoje só o resgate faz isso.
+- Adicionar em Reservas e Investimentos a ação de **Aporte** debitando de uma conta específica (o resgate já existe).
 
-### 1. `src/routes/login.tsx` — tratamento de erro melhorado
+## 3. Saldo diário no extrato
 
-No `catch` do `handle()`:
+- Agrupar o extrato por data, com cabeçalho de dia e, ao final de cada dia, **Saldo do dia** = saldo anterior + entradas − saídas daquele dia, por conta.
+- O saldo do dia usa o saldo real da conta (a partir do saldo inicial e da data do saldo inicial), sem ser afetado por filtros de categoria/tipo — os filtros continuam escondendo linhas, mas o saldo mostrado permanece o real.
+- Com "todas as contas" selecionadas, o rodapé do dia mostra o saldo consolidado e, ao expandir, o saldo por conta.
 
-- Detectar `TypeError: Failed to fetch` / `err.message === "Failed to fetch"` / `err.name === "AuthRetryableFetchError"`.
-- Quando detectado, mostrar toast com mensagem clara:
-  > "Não foi possível conectar ao servidor de autenticação. Se você está no preview do Lovable, tente novamente ou acesse pelo domínio publicado."
-- Para erros conhecidos do Supabase (credenciais inválidas, email não confirmado), traduzir para PT-BR.
-- Demais erros: continuar mostrando `err.message`.
-- Logar o erro completo no `console.error` para debug.
+## 4. Patrimônio
 
-### 2. Sem outras mudanças
+- Passar o Patrimônio Total para **Contas + Reservas + Investimentos**, conforme pedido, e ajustar o modal "Como o patrimônio foi calculado" e os textos de apoio para explicar essa composição.
+- Aplicações/resgates não alteram o total: apenas mudam o dinheiro de lugar dentro dele.
 
-- Não mexer em `client.ts` (auto-gerado).
-- Não alterar `.env`.
-- Não adicionar nenhum override de `window.fetch`.
-- Não tocar em CORS / configuração do Supabase.
+## Detalhes técnicos
 
-## Resultado esperado
-
-- Em produção (`entredias.lovable.app`): login continua funcionando normalmente (já funciona).
-- No preview: se o proxy quebrar a requisição, o usuário vê uma mensagem clara explicando a causa, em vez de "Failed to fetch".
+- `src/lib/patrimony.ts`: já traz `detectApplication`, `resolveTargets` e `applyPatrimonyEffects`; será chamado no `runImport` de `PDFImport.tsx` e `OFXImport.tsx`, e reaproveitado pelas ações manuais em `financas.tsx`.
+- Saldo diário calculado em memória sobre a lista completa de `finances` (não filtrada), por `account_id`, partindo de `initial_balance`/`initial_balance_date`; extraído para um helper em `src/lib/finance.ts`.
+- Ajuste do patrimônio em `financas.tsx` (`const patrimony`), `Overview`, insights e `PatrimonyAudit`.
+- Nenhuma alteração de schema é necessária.
