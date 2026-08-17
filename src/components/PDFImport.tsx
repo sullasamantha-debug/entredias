@@ -384,8 +384,27 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
                             })}
                           </select>
                         </div>
+                      ) : isPatKind ? (
+                        <div className="space-y-1">
+                          <select value={r.targetId} onChange={e => updateRow(i, { targetId: e.target.value, newName: "" })}
+                            className={`h-8 w-full rounded-md border bg-background px-2 text-xs ${r.targetId ? "border-input" : "border-amber-400"}`}>
+                            <option value="">{isJarKind(r.kind as PatKind) ? "Reserva…" : "Investimento…"}</option>
+                            {(isJarKind(r.kind as PatKind) ? (jars ?? []) : (invs ?? [])).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                            <option value={NEW_TARGET}>+ Criar nova…</option>
+                          </select>
+                          {r.targetId === NEW_TARGET && (
+                            <Input value={r.newName} onChange={e => updateRow(i, { newName: e.target.value })}
+                              placeholder={isJarKind(r.kind as PatKind) ? "Nome da reserva" : "Nome do investimento"} className="h-7 text-xs" />
+                          )}
+                          <div className="text-[10px] text-muted-foreground">
+                            {r.targetId
+                              ? patFlowLabel(r.kind as PatKind, r.targetId === NEW_TARGET ? (r.newName || "novo") : ((isJarKind(r.kind as PatKind) ? jars : invs)?.find(t => t.id === r.targetId)?.name ?? "destino"), account.name)
+                              : "Escolha o destino para importar esta linha."}
+                          </div>
+                        </div>
                       ) : isTransferKind ? (
                         <div className="text-[11px] text-muted-foreground">Transferência patrimonial</div>
+
                       ) : (
                         <select value={r.category} onChange={e => updateRow(i, { category: e.target.value })}
                           className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs">
