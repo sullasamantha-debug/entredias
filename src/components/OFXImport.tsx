@@ -342,6 +342,7 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
                     <div className="min-w-[180px] flex-1">
                       <Input value={r.description} onChange={e => updateRow(i, { description: e.target.value })} className="h-8 text-xs" />
                       <div className="mt-1 truncate text-[10px] text-muted-foreground">{r.memo}{r.checknum ? ` · Doc ${r.checknum}` : ""}{r.fitid ? ` · FITID ${r.fitid.slice(0, 12)}` : ""}</div>
+                      {r.appHint && <div className="mt-1 text-[10px] text-sky-700">Possível aplicação/resgate</div>}
                     </div>
                     <div className="min-w-[160px]">
                       <select value={r.kind} onChange={e => setKind(i, e.target.value as Row["kind"])}
