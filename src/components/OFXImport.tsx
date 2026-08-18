@@ -59,6 +59,17 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
     queryFn: async () => (((await (supabase as any).from("ofx_category_rules").select("pattern, category, cat_type")).data) ?? []) as SuggestionRule[],
   });
 
+  const { data: jars } = useQuery({
+    enabled: !!user && open,
+    queryKey: ["jars", user?.id],
+    queryFn: async () => (((await supabase.from("savings_jars").select("id, name").order("name")).data) ?? []) as { id: string; name: string }[],
+  });
+  const { data: invs } = useQuery({
+    enabled: !!user && open,
+    queryKey: ["investments", user?.id],
+    queryFn: async () => (((await supabase.from("investments").select("id, name").order("name")).data) ?? []) as { id: string; name: string }[],
+  });
+
   const pickFile = () => fileRef.current?.click();
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
