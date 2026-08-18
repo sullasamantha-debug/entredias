@@ -329,6 +329,7 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
                 r.kind === "jar_deposit" || r.kind === "jar_withdraw" ? "reserva" :
                 r.kind === "invest_in" || r.kind === "invest_out" ? "investimento" : "despesa";
               const opts = catOptions.filter(c => c.type === wantType);
+              const isPatKind = PAT_KINDS.includes(r.kind as PatKind);
               return (
                 <div key={i} className={`cozy-card p-3 ${r.ignore ? "opacity-50" : ""} ${r.duplicate ? "border-amber-400/50" : ""}`}>
                   <div className="flex flex-wrap items-start gap-3">
