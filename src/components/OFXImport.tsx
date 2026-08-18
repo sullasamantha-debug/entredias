@@ -13,6 +13,10 @@ import { formatDateBR } from "@/lib/dates";
 import { parseOFX, suggestCategory, type OFXTx, type SuggestionRule } from "@/lib/ofx";
 import { memoPattern } from "@/lib/ofx";
 import { CreditCard } from "lucide-react";
+import {
+  detectApplication, resolveTargets, applyPatrimonyEffects, patFinanceRow, patFlowLabel,
+  isJarKind, NEW_TARGET, PAT_KINDS, type PatKind, type EffectItem,
+} from "@/lib/patrimony";
 
 type Cat = { id: string; name: string; type: "receita" | "despesa" | "reserva" | "investimento"; archived: boolean };
 type Account = { id: string; name: string };
@@ -33,6 +37,9 @@ type Row = {
   duplicateId: string | null;
   duplicateAction: "skip" | "import" | "update";
   toAccountId: string;
+  targetId: string;
+  newName: string;
+  appHint: boolean;
 };
 
 export function OFXImportButton({ account, accounts, cats, asItem = false }:
