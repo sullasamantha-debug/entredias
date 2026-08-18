@@ -160,13 +160,31 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
       kind === "jar_deposit" || kind === "jar_withdraw" ? "reserva" :
       kind === "invest_in" || kind === "invest_out" ? "investimento" :
       kind === "transfer" ? "despesa" : "despesa";
-    updateRow(i, { kind, cat_type, category: kind === "transfer" ? "transferência patrimonial" : "" });
+    updateRow(i, {
+      kind, cat_type, targetId: "", newName: "",
+      category: kind === "income" || kind === "expense" ? "" : "transferência patrimonial",
+    });
   };
 
   const runImport = async () => {
     if (!user) return;
+
+    const patRows = selected.filter(r => PAT_KINDS.includes(r.kind as PatKind));
+    if (patRows.some(r => !r.targetId || (r.targetId === NEW_TARGET && !r.newName.trim()))) {
+      toast.error("Escolha a reserva ou o investimento de destino nas linhas de aporte/resgate.");
+      return;
+    }
+
     setBusy(true);
     try {
+      const resolved = await resolveTargets(
+        user.id,
+        selected.map(r => PAT_KINDS.includes(r.kind as PatKind)
+          ? { kind: r.kind as PatKind, targetId: r.targetId, newName: r.newName }
+          : null),
+        { jars: jars ?? [], invs: invs ?? [] },
+      );
+
       // Create import record first
       const { data: imp, error: iErr } = await (supabase as any).from("ofx_imports").insert({
         user_id: user.id, account_id: account.id, file_name: fileName, source_type: "ofx",
@@ -178,8 +196,11 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
       const toInsert: any[] = [];
       const toUpdate: { id: string; patch: any }[] = [];
       const learnPatterns = new Map<string, { category: string; cat_type: string }>();
+      const effects: EffectItem[] = [];
 
-      for (const r of selected) {
+      for (let idx = 0; idx < selected.length; idx++) {
+        const r = selected[idx];
+        const res = resolved[idx];
         const isTransferKind =
           r.kind === "transfer" || r.kind === "jar_deposit" || r.kind === "jar_withdraw" ||
           r.kind === "invest_in" || r.kind === "invest_out";
@@ -187,26 +208,39 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
         const kindStored =
           r.kind === "income" ? "income" :
           r.kind === "expense" ? "expense" : "transfer";
-        const row = {
-          user_id: user.id,
-          kind: kindStored,
-          amount: r.amount,
-          category,
-          description: r.description || null,
-          date: r.date,
-          payment_method: kindStored === "transfer" ? "transferência" : "débito",
-          installments: 1,
-          notes: r.checknum ? `Doc: ${r.checknum}` : null,
-          paid: true,
-          account_id: account.id,
-          to_account_id: kindStored === "transfer" ? (r.toAccountId || null) : null,
-          fitid: r.fitid,
-          ofx_import_id: imp.id,
-        };
+        const notes = r.checknum ? `Doc: ${r.checknum}` : null;
+        const row = res
+          ? {
+              ...patFinanceRow(user.id, {
+                kind: res.kind, amount: r.amount, date: r.date, accountId: account.id,
+                targetName: res.targetName,
+                notes: [notes, patFlowLabel(res.kind, res.targetName, account.name)].filter(Boolean).join(" · "),
+                importId: imp.id,
+              }),
+              fitid: r.fitid,
+            }
+          : {
+              user_id: user.id,
+              kind: kindStored,
+              amount: r.amount,
+              category,
+              description: r.description || null,
+              date: r.date,
+              payment_method: kindStored === "transfer" ? "transferência" : "débito",
+              installments: 1,
+              notes,
+              paid: true,
+              account_id: account.id,
+              to_account_id: kindStored === "transfer" ? (r.toAccountId || null) : null,
+              fitid: r.fitid,
+              ofx_import_id: imp.id,
+            };
         if (r.duplicate && r.duplicateAction === "update" && r.duplicateId) {
           toUpdate.push({ id: r.duplicateId, patch: row });
+          if (res) effects.push({ res, amount: r.amount, date: r.date, accountId: account.id, accountName: account.name });
         } else if (!r.duplicate || r.duplicateAction === "import") {
           toInsert.push(row);
+          if (res) effects.push({ res, amount: r.amount, date: r.date, accountId: account.id, accountName: account.name });
           // Learn: only when not a transfer and category is set
           if (!isTransferKind && r.category) {
             const p = memoPattern(r.memo);
@@ -223,6 +257,9 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
         await supabase.from("finances").update(u.patch).eq("id", u.id);
       }
 
+      // Aportes/resgates: atualizam reservas e investimentos e gravam o histórico
+      await applyPatrimonyEffects(user.id, effects);
+
       // Persist learned rules (upsert by unique (user_id, pattern))
       for (const [pattern, v] of learnPatterns) {
         await (supabase as any).from("ofx_category_rules").upsert({
@@ -238,9 +275,9 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
       toast.success(`${toInsert.length + toUpdate.length} movimentações importadas.`);
       setOpen(false);
       setRows([]);
-      qc.invalidateQueries({ queryKey: ["finances"] });
-      qc.invalidateQueries({ queryKey: ["ofx_imports"] });
-      qc.invalidateQueries({ queryKey: ["ofx_category_rules"] });
+      for (const key of ["finances", "ofx_imports", "ofx_category_rules", "budgets", "jars", "investments", "savings_movements", "investment_movements", "accounts"]) {
+        qc.invalidateQueries({ queryKey: [key] });
+      }
     } finally {
       setBusy(false);
     }
