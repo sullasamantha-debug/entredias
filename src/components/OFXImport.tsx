@@ -104,8 +104,9 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
         const key = `${t.date}|${Math.abs(t.amount).toFixed(2)}`;
         if (byDateAmt.has(key)) dupId = byDateAmt.get(key)!;
       }
-      const kind: Row["kind"] = t.type === "CREDIT" ? "income" : "expense";
-      const suggestedCat = s.isCardPayment ? "Pagamento de Fatura" : (s.category ?? "");
+      const app = detectApplication(t.memo, t.type);
+      const kind: Row["kind"] = app.suggested ?? (t.type === "CREDIT" ? "income" : "expense");
+      const suggestedCat = app.isApplication ? "transferência patrimonial" : s.isCardPayment ? "Pagamento de Fatura" : (s.category ?? "");
       return {
         fitid: t.fitid,
         date: t.date,
@@ -122,6 +123,9 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
         duplicateId: dupId,
         duplicateAction: "skip",
         toAccountId: "",
+        targetId: "",
+        newName: "",
+        appHint: app.isApplication,
       };
     });
     setRows(newRows);
