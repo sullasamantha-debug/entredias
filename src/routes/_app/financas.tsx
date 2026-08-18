@@ -187,10 +187,10 @@ function FinancasPage() {
         <StatCard label="Saldo em contas" value={fmtBRL(accountsTotal)} icon={Wallet} tint="primary"
           hint={accountList.length ? `${accountList.length} conta${accountList.length > 1 ? "s" : ""}` : undefined} />
         <StatCard label="Reservado" value={fmtBRL(totalJars)} icon={PiggyBank} tint="mint"
-          hint="parte do saldo das contas" />
+          hint="guardado em reservas" />
         <StatCard label="Investido" value={fmtBRL(totalInvs)} icon={LineChart} tint="sand" />
         <StatCard label="Patrimônio total" value={fmtBRL(patrimony)} icon={Sparkles} tint="blush"
-          hint={futureCardExpense > 0 ? `−${fmtBRL(futureCardExpense)} em faturas` : "contas + investimentos"} />
+          hint={futureCardExpense > 0 ? `−${fmtBRL(futureCardExpense)} em faturas` : "contas + reservas + investimentos"} />
       </div>
       <div className="mb-8 flex justify-end">
         <PatrimonyAudit accounts={accountList} fins={finList} invs={invs ?? []} jars={jars ?? []} accountsTotal={accountsTotal} totalInvs={totalInvs} totalJars={totalJars} futureCardExpense={futureCardExpense} patrimony={patrimony} today={today} />
