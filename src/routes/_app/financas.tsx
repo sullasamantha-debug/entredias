@@ -176,8 +176,8 @@ function FinancasPage() {
   const futureCardExpense = finList.filter(f => f.kind === "expense" && !f.paid && f.card_id).reduce((a, f) => a + Number(f.amount), 0);
   const totalJars = (jars ?? []).reduce((a, j) => a + Number(j.current_amount), 0);
   const totalInvs = (invs ?? []).reduce((a, i) => a + Number(i.current_amount), 0);
-  // Reservas NÃO entram no patrimônio — já fazem parte das contas (são apenas uma marcação).
-  const patrimony = accountsTotal + totalInvs;
+  // Patrimônio total = contas + reservas + investimentos.
+  const patrimony = accountsTotal + totalJars + totalInvs;
 
   return (
     <div>
