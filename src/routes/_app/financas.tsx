@@ -176,8 +176,8 @@ function FinancasPage() {
   const futureCardExpense = finList.filter(f => f.kind === "expense" && !f.paid && f.card_id).reduce((a, f) => a + Number(f.amount), 0);
   const totalJars = (jars ?? []).reduce((a, j) => a + Number(j.current_amount), 0);
   const totalInvs = (invs ?? []).reduce((a, i) => a + Number(i.current_amount), 0);
-  // Reservas NÃO entram no patrimônio — já fazem parte das contas (são apenas uma marcação).
-  const patrimony = accountsTotal + totalInvs;
+  // Patrimônio total = contas + reservas + investimentos.
+  const patrimony = accountsTotal + totalJars + totalInvs;
 
   return (
     <div>
@@ -187,10 +187,10 @@ function FinancasPage() {
         <StatCard label="Saldo em contas" value={fmtBRL(accountsTotal)} icon={Wallet} tint="primary"
           hint={accountList.length ? `${accountList.length} conta${accountList.length > 1 ? "s" : ""}` : undefined} />
         <StatCard label="Reservado" value={fmtBRL(totalJars)} icon={PiggyBank} tint="mint"
-          hint="parte do saldo das contas" />
+          hint="guardado em reservas" />
         <StatCard label="Investido" value={fmtBRL(totalInvs)} icon={LineChart} tint="sand" />
         <StatCard label="Patrimônio total" value={fmtBRL(patrimony)} icon={Sparkles} tint="blush"
-          hint={futureCardExpense > 0 ? `−${fmtBRL(futureCardExpense)} em faturas` : "contas + investimentos"} />
+          hint={futureCardExpense > 0 ? `−${fmtBRL(futureCardExpense)} em faturas` : "contas + reservas + investimentos"} />
       </div>
       <div className="mb-8 flex justify-end">
         <PatrimonyAudit accounts={accountList} fins={finList} invs={invs ?? []} jars={jars ?? []} accountsTotal={accountsTotal} totalInvs={totalInvs} totalJars={totalJars} futureCardExpense={futureCardExpense} patrimony={patrimony} today={today} />
@@ -1819,7 +1819,7 @@ function PatrimonyAudit({ accounts, fins, invs, jars, accountsTotal, totalInvs, 
             </section>
 
             <section className="cozy-card p-4">
-              <div className="mb-2 flex items-center justify-between font-display text-base"><span className="flex items-center gap-2"><PiggyBank className="h-4 w-4 text-primary" /> Reservas (não somam ao patrimônio)</span><span>{fmtBRL(totalJars)}</span></div>
+              <div className="mb-2 flex items-center justify-between font-display text-base"><span className="flex items-center gap-2"><PiggyBank className="h-4 w-4 text-primary" /> Reservas</span><span>{fmtBRL(totalJars)}</span></div>
               {jars.length ? (
                 <ul className="space-y-1">
                   {jars.map(j => (<li key={j.id} className="flex justify-between text-muted-foreground"><span>{j.name}</span><span className="font-medium text-foreground">{fmtBRL(Number(j.current_amount))}</span></li>))}
@@ -1827,12 +1827,12 @@ function PatrimonyAudit({ accounts, fins, invs, jars, accountsTotal, totalInvs, 
               ) : (
                 <p className="text-xs text-muted-foreground">Sem reservas cadastradas.</p>
               )}
-              <p className="mt-2 text-xs text-muted-foreground">Reservas são recortes do dinheiro que já está nas contas — por isso não são somadas de novo.</p>
+              <p className="mt-2 text-xs text-muted-foreground">Aportes e resgates só mudam o dinheiro de lugar: saem da conta e entram na reserva (ou o contrário), sem alterar o patrimônio total.</p>
             </section>
 
             <section className="cozy-card p-4">
               <div className="flex items-center justify-between font-display text-base"><span>Total</span><span>{fmtBRL(patrimony)}</span></div>
-              <p className="mt-1 text-xs text-muted-foreground">{fmtBRL(accountsTotal)} (contas) + {fmtBRL(totalInvs)} (investimentos) = {fmtBRL(patrimony)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{fmtBRL(accountsTotal)} (contas) + {fmtBRL(totalJars)} (reservas) + {fmtBRL(totalInvs)} (investimentos) = {fmtBRL(patrimony)}</p>
               {futureCardExpense > 0 && (
                 <p className="mt-2 text-xs text-amber-700">Atenção: existem {fmtBRL(futureCardExpense)} em despesas de cartão ainda não pagas. Elas reduzirão o saldo quando a fatura for quitada, mas ainda não foram descontadas do patrimônio.</p>
               )}

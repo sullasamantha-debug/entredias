@@ -13,6 +13,10 @@ import { formatDateBR } from "@/lib/dates";
 import { parseOFX, suggestCategory, type OFXTx, type SuggestionRule } from "@/lib/ofx";
 import { memoPattern } from "@/lib/ofx";
 import { CreditCard } from "lucide-react";
+import {
+  detectApplication, resolveTargets, applyPatrimonyEffects, patFinanceRow, patFlowLabel,
+  isJarKind, NEW_TARGET, PAT_KINDS, type PatKind, type EffectItem,
+} from "@/lib/patrimony";
 
 type Cat = { id: string; name: string; type: "receita" | "despesa" | "reserva" | "investimento"; archived: boolean };
 type Account = { id: string; name: string };
@@ -33,6 +37,9 @@ type Row = {
   duplicateId: string | null;
   duplicateAction: "skip" | "import" | "update";
   toAccountId: string;
+  targetId: string;
+  newName: string;
+  appHint: boolean;
 };
 
 export function OFXImportButton({ account, accounts, cats, asItem = false }:
@@ -50,6 +57,17 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
     enabled: !!user && open,
     queryKey: ["ofx_category_rules", user?.id],
     queryFn: async () => (((await (supabase as any).from("ofx_category_rules").select("pattern, category, cat_type")).data) ?? []) as SuggestionRule[],
+  });
+
+  const { data: jars } = useQuery({
+    enabled: !!user && open,
+    queryKey: ["jars", user?.id],
+    queryFn: async () => (((await supabase.from("savings_jars").select("id, name").order("name")).data) ?? []) as { id: string; name: string }[],
+  });
+  const { data: invs } = useQuery({
+    enabled: !!user && open,
+    queryKey: ["investments", user?.id],
+    queryFn: async () => (((await supabase.from("investments").select("id, name").order("name")).data) ?? []) as { id: string; name: string }[],
   });
 
   const pickFile = () => fileRef.current?.click();
@@ -97,8 +115,9 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
         const key = `${t.date}|${Math.abs(t.amount).toFixed(2)}`;
         if (byDateAmt.has(key)) dupId = byDateAmt.get(key)!;
       }
-      const kind: Row["kind"] = t.type === "CREDIT" ? "income" : "expense";
-      const suggestedCat = s.isCardPayment ? "Pagamento de Fatura" : (s.category ?? "");
+      const app = detectApplication(t.memo, t.type);
+      const kind: Row["kind"] = app.suggested ?? (t.type === "CREDIT" ? "income" : "expense");
+      const suggestedCat = app.isApplication ? "transferência patrimonial" : s.isCardPayment ? "Pagamento de Fatura" : (s.category ?? "");
       return {
         fitid: t.fitid,
         date: t.date,
@@ -115,6 +134,9 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
         duplicateId: dupId,
         duplicateAction: "skip",
         toAccountId: "",
+        targetId: "",
+        newName: "",
+        appHint: app.isApplication,
       };
     });
     setRows(newRows);
@@ -138,13 +160,31 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
       kind === "jar_deposit" || kind === "jar_withdraw" ? "reserva" :
       kind === "invest_in" || kind === "invest_out" ? "investimento" :
       kind === "transfer" ? "despesa" : "despesa";
-    updateRow(i, { kind, cat_type, category: kind === "transfer" ? "transferência patrimonial" : "" });
+    updateRow(i, {
+      kind, cat_type, targetId: "", newName: "",
+      category: kind === "income" || kind === "expense" ? "" : "transferência patrimonial",
+    });
   };
 
   const runImport = async () => {
     if (!user) return;
+
+    const patRows = selected.filter(r => PAT_KINDS.includes(r.kind as PatKind));
+    if (patRows.some(r => !r.targetId || (r.targetId === NEW_TARGET && !r.newName.trim()))) {
+      toast.error("Escolha a reserva ou o investimento de destino nas linhas de aporte/resgate.");
+      return;
+    }
+
     setBusy(true);
     try {
+      const resolved = await resolveTargets(
+        user.id,
+        selected.map(r => PAT_KINDS.includes(r.kind as PatKind)
+          ? { kind: r.kind as PatKind, targetId: r.targetId, newName: r.newName }
+          : null),
+        { jars: jars ?? [], invs: invs ?? [] },
+      );
+
       // Create import record first
       const { data: imp, error: iErr } = await (supabase as any).from("ofx_imports").insert({
         user_id: user.id, account_id: account.id, file_name: fileName, source_type: "ofx",
@@ -156,8 +196,11 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
       const toInsert: any[] = [];
       const toUpdate: { id: string; patch: any }[] = [];
       const learnPatterns = new Map<string, { category: string; cat_type: string }>();
+      const effects: EffectItem[] = [];
 
-      for (const r of selected) {
+      for (let idx = 0; idx < selected.length; idx++) {
+        const r = selected[idx];
+        const res = resolved[idx];
         const isTransferKind =
           r.kind === "transfer" || r.kind === "jar_deposit" || r.kind === "jar_withdraw" ||
           r.kind === "invest_in" || r.kind === "invest_out";
@@ -165,26 +208,39 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
         const kindStored =
           r.kind === "income" ? "income" :
           r.kind === "expense" ? "expense" : "transfer";
-        const row = {
-          user_id: user.id,
-          kind: kindStored,
-          amount: r.amount,
-          category,
-          description: r.description || null,
-          date: r.date,
-          payment_method: kindStored === "transfer" ? "transferência" : "débito",
-          installments: 1,
-          notes: r.checknum ? `Doc: ${r.checknum}` : null,
-          paid: true,
-          account_id: account.id,
-          to_account_id: kindStored === "transfer" ? (r.toAccountId || null) : null,
-          fitid: r.fitid,
-          ofx_import_id: imp.id,
-        };
+        const notes = r.checknum ? `Doc: ${r.checknum}` : null;
+        const row = res
+          ? {
+              ...patFinanceRow(user.id, {
+                kind: res.kind, amount: r.amount, date: r.date, accountId: account.id,
+                targetName: res.targetName,
+                notes: [notes, patFlowLabel(res.kind, res.targetName, account.name)].filter(Boolean).join(" · "),
+                importId: imp.id,
+              }),
+              fitid: r.fitid,
+            }
+          : {
+              user_id: user.id,
+              kind: kindStored,
+              amount: r.amount,
+              category,
+              description: r.description || null,
+              date: r.date,
+              payment_method: kindStored === "transfer" ? "transferência" : "débito",
+              installments: 1,
+              notes,
+              paid: true,
+              account_id: account.id,
+              to_account_id: kindStored === "transfer" ? (r.toAccountId || null) : null,
+              fitid: r.fitid,
+              ofx_import_id: imp.id,
+            };
         if (r.duplicate && r.duplicateAction === "update" && r.duplicateId) {
           toUpdate.push({ id: r.duplicateId, patch: row });
+          if (res) effects.push({ res, amount: r.amount, date: r.date, accountId: account.id, accountName: account.name });
         } else if (!r.duplicate || r.duplicateAction === "import") {
           toInsert.push(row);
+          if (res) effects.push({ res, amount: r.amount, date: r.date, accountId: account.id, accountName: account.name });
           // Learn: only when not a transfer and category is set
           if (!isTransferKind && r.category) {
             const p = memoPattern(r.memo);
@@ -201,6 +257,9 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
         await supabase.from("finances").update(u.patch).eq("id", u.id);
       }
 
+      // Aportes/resgates: atualizam reservas e investimentos e gravam o histórico
+      await applyPatrimonyEffects(user.id, effects);
+
       // Persist learned rules (upsert by unique (user_id, pattern))
       for (const [pattern, v] of learnPatterns) {
         await (supabase as any).from("ofx_category_rules").upsert({
@@ -216,9 +275,9 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
       toast.success(`${toInsert.length + toUpdate.length} movimentações importadas.`);
       setOpen(false);
       setRows([]);
-      qc.invalidateQueries({ queryKey: ["finances"] });
-      qc.invalidateQueries({ queryKey: ["ofx_imports"] });
-      qc.invalidateQueries({ queryKey: ["ofx_category_rules"] });
+      for (const key of ["finances", "ofx_imports", "ofx_category_rules", "budgets", "jars", "investments", "savings_movements", "investment_movements", "accounts"]) {
+        qc.invalidateQueries({ queryKey: [key] });
+      }
     } finally {
       setBusy(false);
     }
@@ -270,6 +329,7 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
                 r.kind === "jar_deposit" || r.kind === "jar_withdraw" ? "reserva" :
                 r.kind === "invest_in" || r.kind === "invest_out" ? "investimento" : "despesa";
               const opts = catOptions.filter(c => c.type === wantType);
+              const isPatKind = PAT_KINDS.includes(r.kind as PatKind);
               return (
                 <div key={i} className={`cozy-card p-3 ${r.ignore ? "opacity-50" : ""} ${r.duplicate ? "border-amber-400/50" : ""}`}>
                   <div className="flex flex-wrap items-start gap-3">
@@ -282,6 +342,7 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
                     <div className="min-w-[180px] flex-1">
                       <Input value={r.description} onChange={e => updateRow(i, { description: e.target.value })} className="h-8 text-xs" />
                       <div className="mt-1 truncate text-[10px] text-muted-foreground">{r.memo}{r.checknum ? ` · Doc ${r.checknum}` : ""}{r.fitid ? ` · FITID ${r.fitid.slice(0, 12)}` : ""}</div>
+                      {r.appHint && <div className="mt-1 text-[10px] text-sky-700">Possível aplicação/resgate</div>}
                     </div>
                     <div className="min-w-[160px]">
                       <select value={r.kind} onChange={e => setKind(i, e.target.value as Row["kind"])}
@@ -296,8 +357,26 @@ export function OFXImportButton({ account, accounts, cats, asItem = false }:
                         <option value="invest_out">Resgate de investimento</option>
                       </select>
                     </div>
-                    <div className="min-w-[160px]">
-                      {isTransferKind ? (
+                    <div className="min-w-[170px]">
+                      {isPatKind ? (
+                        <div className="space-y-1">
+                          <select value={r.targetId} onChange={e => updateRow(i, { targetId: e.target.value, newName: "" })}
+                            className={`h-8 w-full rounded-md border bg-background px-2 text-xs ${r.targetId ? "border-input" : "border-amber-400"}`}>
+                            <option value="">{isJarKind(r.kind as PatKind) ? "Reserva…" : "Investimento…"}</option>
+                            {(isJarKind(r.kind as PatKind) ? (jars ?? []) : (invs ?? [])).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                            <option value={NEW_TARGET}>+ Criar nova…</option>
+                          </select>
+                          {r.targetId === NEW_TARGET && (
+                            <Input value={r.newName} onChange={e => updateRow(i, { newName: e.target.value })}
+                              placeholder={isJarKind(r.kind as PatKind) ? "Nome da reserva" : "Nome do investimento"} className="h-7 text-xs" />
+                          )}
+                          <div className="text-[10px] text-muted-foreground">
+                            {r.targetId
+                              ? patFlowLabel(r.kind as PatKind, r.targetId === NEW_TARGET ? (r.newName || "novo") : ((isJarKind(r.kind as PatKind) ? jars : invs)?.find(t => t.id === r.targetId)?.name ?? "destino"), account.name)
+                              : "Escolha o destino para importar esta linha."}
+                          </div>
+                        </div>
+                      ) : isTransferKind ? (
                         <select value={r.toAccountId} onChange={e => updateRow(i, { toAccountId: e.target.value })}
                           className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs">
                           <option value="">Conta destino…</option>
