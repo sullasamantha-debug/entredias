@@ -319,6 +319,7 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
           <div className="space-y-2">
             {rows.map((r, i) => {
               const isTransferKind = TRANSFER_KINDS.includes(r.kind);
+              const isPatKind = PAT_KINDS.includes(r.kind as PatKind);
               const wantType: Cat["type"] =
                 r.kind === "income" ? "receita" :
                 r.kind === "jar_deposit" || r.kind === "jar_withdraw" ? "reserva" :
