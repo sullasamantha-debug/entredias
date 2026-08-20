@@ -569,6 +569,20 @@ function Transactions({ fins, cards, accounts, cats, budgets }: { fins: Fin[]; c
     return l;
   }, [fins, filter, accFilter]);
 
+  // Saldo real por conta ao final de cada dia — sempre sobre a lista completa,
+  // para não ser afetado pelos filtros de tipo/categoria da tela.
+  const balancesByDay = useMemo(() => dailyBalances(accounts as any, fins as any), [accounts, fins]);
+
+  const dayGroups = useMemo(() => {
+    const map = new Map<string, Fin[]>();
+    for (const f of list) {
+      const arr = map.get(f.date) ?? [];
+      arr.push(f);
+      map.set(f.date, arr);
+    }
+    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [list]);
+
   const accName = (id: string | null) => accounts.find(a => a.id === id)?.name;
 
   const save = async () => {
