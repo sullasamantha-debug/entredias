@@ -755,10 +755,26 @@ function Transactions({ fins, cards, accounts, cats, budgets }: { fins: Fin[]; c
       </Dialog>
 
       {!list.length ? <EmptyState title="Sem registros" description="Comece registrando uma entrada, saída ou transferência." /> : (
-        <div className="space-y-2">
-          {list.map((x, i) => {
+        <div className="space-y-5">
+          {dayGroups.map(([date, items]) => {
+            const bal = balancesByDay.get(date);
+            const dayIn = items.filter(x => x.kind === "income").reduce((a, x) => a + Number(x.amount), 0);
+            const dayOut = items.filter(x => x.kind === "expense" && x.paid).reduce((a, x) => a + Number(x.amount), 0);
+            return (
+              <div key={date}>
+                <div className="mb-2 flex items-center justify-between px-1">
+                  <span className="font-display text-sm">{formatDateBR(date)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {dayIn > 0 && <span className="text-emerald-600">+{fmtBRL(dayIn)}</span>}
+                    {dayIn > 0 && dayOut > 0 && " · "}
+                    {dayOut > 0 && <span className="text-rose-600">−{fmtBRL(dayOut)}</span>}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {items.map((x, i) => {
             const isCredit = !!x.card_id;
             const isTransfer = x.kind === "transfer";
+            const isPat = isTransfer && x.category === "transferência patrimonial";
             const card = cards.find(c => c.id === x.card_id);
             const from = accName(x.account_id);
             const to = accName(x.to_account_id);
@@ -770,8 +786,11 @@ function Transactions({ fins, cards, accounts, cats, budgets }: { fins: Fin[]; c
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">{x.description || (isTransfer ? `${from ?? "?"} → ${to ?? "?"}` : x.category || "Registro")}</span>
-                    {isTransfer && x.category === "transferência patrimonial" && (
-                      <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-medium text-sky-700">Transferência patrimonial</span>
+                    {isPat && (
+                      <>
+                        <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary">Aplicação</span>
+                        <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-medium text-sky-700">Transferência patrimonial</span>
+                      </>
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -790,6 +809,25 @@ function Transactions({ fins, cards, accounts, cats, budgets }: { fins: Fin[]; c
                 <button onClick={() => { setEditing(x); setOpen(true); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent"><Pencil className="h-4 w-4" /></button>
                 <button onClick={() => setConfirmId(x.id)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
               </motion.div>
+            );
+                  })}
+                </div>
+                {bal && accounts.length > 0 && (
+                  <div className="mt-2 rounded-xl bg-accent/40 px-4 py-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Saldo do dia {accFilter !== "all" ? `· ${accName(accFilter) ?? ""}` : "· todas as contas"}</span>
+                      <span className="font-display text-sm text-foreground">
+                        {fmtBRL(accFilter !== "all" ? (bal.per[accFilter] ?? 0) : bal.total)}
+                      </span>
+                    </div>
+                    {accFilter === "all" && accounts.length > 1 && (
+                      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                        {accounts.map(a => <span key={a.id}>{a.name}: {fmtBRL(bal.per[a.id] ?? 0)}</span>)}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
