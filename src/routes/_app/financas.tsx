@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateBR, localDateKey } from "@/lib/dates";
-import { fmtBRL, monthKey, addMonth, labelMonth, invoiceMonthFor, dueDateOf, daysUntil } from "@/lib/finance";
+import { fmtBRL, monthKey, addMonth, labelMonth, invoiceMonthFor, dueDateOf, daysUntil, dailyBalances } from "@/lib/finance";
 import { OFXImportsHistory, OFXCardImportButton } from "@/components/OFXImport";
 import { ImportStatementMenu } from "@/components/PDFImport";
 
