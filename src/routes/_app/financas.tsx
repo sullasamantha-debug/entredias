@@ -1255,6 +1255,11 @@ function Investments({ invs, accounts }: { invs: Inv[]; accounts: Account[] }) {
     if (redeem) { setRedeemAmt(0); setRedeemAcc(accounts[0]?.id ?? ""); }
   }, [redeem, accounts]);
 
+  useEffect(() => {
+    if (contrib) { setContribAmt(0); setContribAcc(accounts[0]?.id ?? ""); setContribDate(localDateKey()); }
+  }, [contrib, accounts]);
+
+
   const save = async () => {
     if (!user || !form.name) return;
     const payload = {
