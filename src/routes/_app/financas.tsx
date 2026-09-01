@@ -1062,19 +1062,23 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
     if (!move || !moveAmt) return;
     const jar = move.jar;
     const today = localDateKey();
+    const accName = accounts.find(a => a.id === moveAcc)?.name ?? null;
     if (move.mode === "deposit") {
+      if (!moveAcc) return toast.error("Escolha a conta de origem do aporte.");
       await supabase.from("savings_jars").update({ current_amount: Number(jar.current_amount) + moveAmt }).eq("id", jar.id);
+      // Patrimonial transfer: debits the source account without counting as expense
+      await supabase.from("finances").insert(patFinanceRow(user!.id, {
+        kind: "jar_deposit", amount: moveAmt, date: today, accountId: moveAcc, targetName: jar.name,
+      }) as any);
+      qc.invalidateQueries({ queryKey: ["finances"] });
+      toast.success("Aporte registrado no extrato da conta.");
     } else if (move.mode === "withdraw") {
       if (!moveAcc) return toast.error("Escolha a conta de destino do resgate.");
       await supabase.from("savings_jars").update({ current_amount: Math.max(0, Number(jar.current_amount) - moveAmt) }).eq("id", jar.id);
-      // Patrimonial transfer: credits the destination account without counting as income/expense
-      await supabase.from("finances").insert({
-        user_id: user!.id, kind: "transfer", amount: moveAmt,
-        account_id: null, to_account_id: moveAcc,
-        category: "transferência patrimonial",
-        description: `Resgate de Reserva: ${jar.name}`,
-        date: today, payment_method: "transferência", paid: true,
-      });
+      // Patrimonial transfer: credits the destination account without counting as income
+      await supabase.from("finances").insert(patFinanceRow(user!.id, {
+        kind: "jar_withdraw", amount: moveAmt, date: today, accountId: moveAcc, targetName: jar.name,
+      }) as any);
       qc.invalidateQueries({ queryKey: ["finances"] });
       toast.success("Resgate registrado no extrato da conta.");
     } else {
@@ -1084,13 +1088,17 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
       await supabase.from("savings_jars").update({ current_amount: Math.max(0, Number(jar.current_amount) - moveAmt) }).eq("id", jar.id);
       await supabase.from("savings_jars").update({ current_amount: Number(target.current_amount) + moveAmt }).eq("id", target.id);
     }
+    const isTransfer = move.mode === "transfer";
     await supabase.from("savings_movements").insert({
-      user_id: user!.id, jar_id: jar.id, kind: move.mode === "transfer" ? "transfer_out" : move.mode,
+      user_id: user!.id, jar_id: jar.id, kind: isTransfer ? "transfer_out" : move.mode,
       amount: moveAmt, date: today,
-    });
+      account_id: isTransfer ? null : (moveAcc || null),
+      notes: !isTransfer && accName ? `${move.mode === "deposit" ? "Origem" : "Destino"}: ${accName}` : null,
+    } as any);
     setMove(null); setMoveAmt(0); setMoveTo(""); setMoveAcc("");
     qc.invalidateQueries({ queryKey: ["jars"] });
     qc.invalidateQueries({ queryKey: ["savings_movements"] });
+    qc.invalidateQueries({ queryKey: ["accounts"] });
   };
 
   return (
