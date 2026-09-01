@@ -1031,9 +1031,9 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing]);
 
-  // Default the destination account when opening the withdraw dialog
+  // Default the account when opening the deposit/withdraw dialog
   useEffect(() => {
-    if (move?.mode === "withdraw") setMoveAcc(move.jar.account_id ?? accounts[0]?.id ?? "");
+    if (move && move.mode !== "transfer") setMoveAcc(move.jar.account_id ?? accounts[0]?.id ?? "");
     else setMoveAcc("");
   }, [move, accounts]);
 
