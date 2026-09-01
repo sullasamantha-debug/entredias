@@ -1233,6 +1233,12 @@ function Investments({ invs, accounts }: { invs: Inv[]; accounts: Account[] }) {
   const [redeemAmt, setRedeemAmt] = useState(0);
   const [redeemAcc, setRedeemAcc] = useState("");
 
+  // Contribution (aporte) state
+  const [contrib, setContrib] = useState<Inv | null>(null);
+  const [contribAmt, setContribAmt] = useState(0);
+  const [contribAcc, setContribAcc] = useState("");
+  const [contribDate, setContribDate] = useState(localDateKey());
+
   useEffect(() => {
     if (!open) return;
     setForm(editing ? {
