@@ -1154,14 +1154,18 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
                 </select>
               </div>
             )}
-            {move?.mode === "withdraw" && (
+            {move && move.mode !== "transfer" && (
               <div>
-                <Label>Conta de destino</Label>
+                <Label>{move.mode === "deposit" ? "Conta de origem" : "Conta de destino"}</Label>
                 <select value={moveAcc} onChange={e => setMoveAcc(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                   <option value="">Selecione a conta…</option>
                   {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
-                <p className="mt-1 text-xs text-muted-foreground">O valor aparecerá no extrato da conta como <strong>Transferência patrimonial</strong> — não conta como nova receita.</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {move.mode === "deposit"
+                    ? <>O valor sai do saldo desta conta e aparece no extrato como <strong>Transferência patrimonial</strong> — não conta como despesa.</>
+                    : <>O valor aparecerá no extrato da conta como <strong>Transferência patrimonial</strong> — não conta como nova receita.</>}
+                </p>
               </div>
             )}
             <Button onClick={applyMove} className="w-full rounded-full">Confirmar</Button>
