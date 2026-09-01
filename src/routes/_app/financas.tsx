@@ -1292,17 +1292,48 @@ function Investments({ invs, accounts }: { invs: Inv[]; accounts: Account[] }) {
     await supabase.from("investments").update({
       current_amount: newCur, invested_amount: newInvested,
     }).eq("id", inv.id);
-    await supabase.from("finances").insert({
-      user_id: user.id, kind: "transfer", amount: redeemAmt,
-      account_id: null, to_account_id: redeemAcc,
-      category: "transferência patrimonial",
-      description: `Resgate de Investimento: ${inv.name}`,
-      date: localDateKey(), payment_method: "transferência", paid: true,
+    const today = localDateKey();
+    const accName = accounts.find(a => a.id === redeemAcc)?.name ?? null;
+    await supabase.from("finances").insert(patFinanceRow(user.id, {
+      kind: "invest_out", amount: redeemAmt, date: today, accountId: redeemAcc, targetName: inv.name,
+    }) as any);
+    await (supabase as any).from("investment_movements").insert({
+      user_id: user.id, investment_id: inv.id, kind: "withdraw",
+      amount: redeemAmt, date: today, account_id: redeemAcc,
+      notes: accName ? `Destino: ${accName}` : null,
     });
     toast.success("Resgate registrado no extrato da conta.");
     setRedeem(null);
     qc.invalidateQueries({ queryKey: ["investments"] });
+    qc.invalidateQueries({ queryKey: ["investment_movements"] });
     qc.invalidateQueries({ queryKey: ["finances"] });
+    qc.invalidateQueries({ queryKey: ["accounts"] });
+  };
+
+  const applyContrib = async () => {
+    if (!contrib || !user) return;
+    const inv = contrib;
+    if (contribAmt <= 0) return toast.error("Informe o valor do aporte.");
+    if (!contribAcc) return toast.error("Escolha a conta de origem.");
+    const accName = accounts.find(a => a.id === contribAcc)?.name ?? null;
+    await supabase.from("investments").update({
+      invested_amount: Number(inv.invested_amount) + contribAmt,
+      current_amount: Number(inv.current_amount) + contribAmt,
+    }).eq("id", inv.id);
+    await supabase.from("finances").insert(patFinanceRow(user.id, {
+      kind: "invest_in", amount: contribAmt, date: contribDate, accountId: contribAcc, targetName: inv.name,
+    }) as any);
+    await (supabase as any).from("investment_movements").insert({
+      user_id: user.id, investment_id: inv.id, kind: "deposit",
+      amount: contribAmt, date: contribDate, account_id: contribAcc,
+      notes: accName ? `Origem: ${accName}` : null,
+    });
+    toast.success("Aporte registrado no extrato da conta.");
+    setContrib(null);
+    qc.invalidateQueries({ queryKey: ["investments"] });
+    qc.invalidateQueries({ queryKey: ["investment_movements"] });
+    qc.invalidateQueries({ queryKey: ["finances"] });
+    qc.invalidateQueries({ queryKey: ["accounts"] });
   };
 
   const totalInv = invs.reduce((a, i) => a + Number(i.invested_amount), 0);
