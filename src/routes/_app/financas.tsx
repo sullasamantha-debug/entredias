@@ -23,6 +23,7 @@ import { formatDateBR, localDateKey } from "@/lib/dates";
 import { fmtBRL, monthKey, addMonth, labelMonth, invoiceMonthFor, dueDateOf, daysUntil, dailyBalances } from "@/lib/finance";
 import { OFXImportsHistory, OFXCardImportButton } from "@/components/OFXImport";
 import { ImportStatementMenu } from "@/components/PDFImport";
+import { patFinanceRow } from "@/lib/patrimony";
 
 export const Route = createFileRoute("/_app/financas")({ component: FinancasPage });
 
@@ -1030,9 +1031,9 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing]);
 
-  // Default the destination account when opening the withdraw dialog
+  // Default the account when opening the deposit/withdraw dialog
   useEffect(() => {
-    if (move?.mode === "withdraw") setMoveAcc(move.jar.account_id ?? accounts[0]?.id ?? "");
+    if (move && move.mode !== "transfer") setMoveAcc(move.jar.account_id ?? accounts[0]?.id ?? "");
     else setMoveAcc("");
   }, [move, accounts]);
 
@@ -1061,19 +1062,23 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
     if (!move || !moveAmt) return;
     const jar = move.jar;
     const today = localDateKey();
+    const accName = accounts.find(a => a.id === moveAcc)?.name ?? null;
     if (move.mode === "deposit") {
+      if (!moveAcc) return toast.error("Escolha a conta de origem do aporte.");
       await supabase.from("savings_jars").update({ current_amount: Number(jar.current_amount) + moveAmt }).eq("id", jar.id);
+      // Patrimonial transfer: debits the source account without counting as expense
+      await supabase.from("finances").insert(patFinanceRow(user!.id, {
+        kind: "jar_deposit", amount: moveAmt, date: today, accountId: moveAcc, targetName: jar.name,
+      }) as any);
+      qc.invalidateQueries({ queryKey: ["finances"] });
+      toast.success("Aporte registrado no extrato da conta.");
     } else if (move.mode === "withdraw") {
       if (!moveAcc) return toast.error("Escolha a conta de destino do resgate.");
       await supabase.from("savings_jars").update({ current_amount: Math.max(0, Number(jar.current_amount) - moveAmt) }).eq("id", jar.id);
-      // Patrimonial transfer: credits the destination account without counting as income/expense
-      await supabase.from("finances").insert({
-        user_id: user!.id, kind: "transfer", amount: moveAmt,
-        account_id: null, to_account_id: moveAcc,
-        category: "transferência patrimonial",
-        description: `Resgate de Reserva: ${jar.name}`,
-        date: today, payment_method: "transferência", paid: true,
-      });
+      // Patrimonial transfer: credits the destination account without counting as income
+      await supabase.from("finances").insert(patFinanceRow(user!.id, {
+        kind: "jar_withdraw", amount: moveAmt, date: today, accountId: moveAcc, targetName: jar.name,
+      }) as any);
       qc.invalidateQueries({ queryKey: ["finances"] });
       toast.success("Resgate registrado no extrato da conta.");
     } else {
@@ -1083,19 +1088,23 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
       await supabase.from("savings_jars").update({ current_amount: Math.max(0, Number(jar.current_amount) - moveAmt) }).eq("id", jar.id);
       await supabase.from("savings_jars").update({ current_amount: Number(target.current_amount) + moveAmt }).eq("id", target.id);
     }
+    const isTransfer = move.mode === "transfer";
     await supabase.from("savings_movements").insert({
-      user_id: user!.id, jar_id: jar.id, kind: move.mode === "transfer" ? "transfer_out" : move.mode,
+      user_id: user!.id, jar_id: jar.id, kind: isTransfer ? "transfer_out" : move.mode,
       amount: moveAmt, date: today,
-    });
+      account_id: isTransfer ? null : (moveAcc || null),
+      notes: !isTransfer && accName ? `${move.mode === "deposit" ? "Origem" : "Destino"}: ${accName}` : null,
+    } as any);
     setMove(null); setMoveAmt(0); setMoveTo(""); setMoveAcc("");
     qc.invalidateQueries({ queryKey: ["jars"] });
     qc.invalidateQueries({ queryKey: ["savings_movements"] });
+    qc.invalidateQueries({ queryKey: ["accounts"] });
   };
 
   return (
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">As reservas separam parte do saldo de uma conta para um objetivo. Elas não criam dinheiro novo nem somam ao patrimônio.</p>
+        <p className="text-xs text-muted-foreground">As reservas separam parte do seu dinheiro para um objetivo. Aportes saem do saldo da conta e entram na reserva — o dinheiro só muda de lugar dentro do patrimônio.</p>
         <Button onClick={() => { setEditing(null); setOpen(true); }} className="shrink-0 rounded-full"><Plus className="mr-1 h-4 w-4" />Nova reserva</Button>
       </div>
 
@@ -1145,14 +1154,18 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
                 </select>
               </div>
             )}
-            {move?.mode === "withdraw" && (
+            {move && move.mode !== "transfer" && (
               <div>
-                <Label>Conta de destino</Label>
+                <Label>{move.mode === "deposit" ? "Conta de origem" : "Conta de destino"}</Label>
                 <select value={moveAcc} onChange={e => setMoveAcc(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                   <option value="">Selecione a conta…</option>
                   {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
-                <p className="mt-1 text-xs text-muted-foreground">O valor aparecerá no extrato da conta como <strong>Transferência patrimonial</strong> — não conta como nova receita.</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {move.mode === "deposit"
+                    ? <>O valor sai do saldo desta conta e aparece no extrato como <strong>Transferência patrimonial</strong> — não conta como despesa.</>
+                    : <>O valor aparecerá no extrato da conta como <strong>Transferência patrimonial</strong> — não conta como nova receita.</>}
+                </p>
               </div>
             )}
             <Button onClick={applyMove} className="w-full rounded-full">Confirmar</Button>
@@ -1220,6 +1233,12 @@ function Investments({ invs, accounts }: { invs: Inv[]; accounts: Account[] }) {
   const [redeemAmt, setRedeemAmt] = useState(0);
   const [redeemAcc, setRedeemAcc] = useState("");
 
+  // Contribution (aporte) state
+  const [contrib, setContrib] = useState<Inv | null>(null);
+  const [contribAmt, setContribAmt] = useState(0);
+  const [contribAcc, setContribAcc] = useState("");
+  const [contribDate, setContribDate] = useState(localDateKey());
+
   useEffect(() => {
     if (!open) return;
     setForm(editing ? {
@@ -1235,6 +1254,11 @@ function Investments({ invs, accounts }: { invs: Inv[]; accounts: Account[] }) {
   useEffect(() => {
     if (redeem) { setRedeemAmt(0); setRedeemAcc(accounts[0]?.id ?? ""); }
   }, [redeem, accounts]);
+
+  useEffect(() => {
+    if (contrib) { setContribAmt(0); setContribAcc(accounts[0]?.id ?? ""); setContribDate(localDateKey()); }
+  }, [contrib, accounts]);
+
 
   const save = async () => {
     if (!user || !form.name) return;
@@ -1273,17 +1297,48 @@ function Investments({ invs, accounts }: { invs: Inv[]; accounts: Account[] }) {
     await supabase.from("investments").update({
       current_amount: newCur, invested_amount: newInvested,
     }).eq("id", inv.id);
-    await supabase.from("finances").insert({
-      user_id: user.id, kind: "transfer", amount: redeemAmt,
-      account_id: null, to_account_id: redeemAcc,
-      category: "transferência patrimonial",
-      description: `Resgate de Investimento: ${inv.name}`,
-      date: localDateKey(), payment_method: "transferência", paid: true,
+    const today = localDateKey();
+    const accName = accounts.find(a => a.id === redeemAcc)?.name ?? null;
+    await supabase.from("finances").insert(patFinanceRow(user.id, {
+      kind: "invest_out", amount: redeemAmt, date: today, accountId: redeemAcc, targetName: inv.name,
+    }) as any);
+    await (supabase as any).from("investment_movements").insert({
+      user_id: user.id, investment_id: inv.id, kind: "withdraw",
+      amount: redeemAmt, date: today, account_id: redeemAcc,
+      notes: accName ? `Destino: ${accName}` : null,
     });
     toast.success("Resgate registrado no extrato da conta.");
     setRedeem(null);
     qc.invalidateQueries({ queryKey: ["investments"] });
+    qc.invalidateQueries({ queryKey: ["investment_movements"] });
     qc.invalidateQueries({ queryKey: ["finances"] });
+    qc.invalidateQueries({ queryKey: ["accounts"] });
+  };
+
+  const applyContrib = async () => {
+    if (!contrib || !user) return;
+    const inv = contrib;
+    if (contribAmt <= 0) return toast.error("Informe o valor do aporte.");
+    if (!contribAcc) return toast.error("Escolha a conta de origem.");
+    const accName = accounts.find(a => a.id === contribAcc)?.name ?? null;
+    await supabase.from("investments").update({
+      invested_amount: Number(inv.invested_amount) + contribAmt,
+      current_amount: Number(inv.current_amount) + contribAmt,
+    }).eq("id", inv.id);
+    await supabase.from("finances").insert(patFinanceRow(user.id, {
+      kind: "invest_in", amount: contribAmt, date: contribDate, accountId: contribAcc, targetName: inv.name,
+    }) as any);
+    await (supabase as any).from("investment_movements").insert({
+      user_id: user.id, investment_id: inv.id, kind: "deposit",
+      amount: contribAmt, date: contribDate, account_id: contribAcc,
+      notes: accName ? `Origem: ${accName}` : null,
+    });
+    toast.success("Aporte registrado no extrato da conta.");
+    setContrib(null);
+    qc.invalidateQueries({ queryKey: ["investments"] });
+    qc.invalidateQueries({ queryKey: ["investment_movements"] });
+    qc.invalidateQueries({ queryKey: ["finances"] });
+    qc.invalidateQueries({ queryKey: ["accounts"] });
   };
 
   const totalInv = invs.reduce((a, i) => a + Number(i.invested_amount), 0);
@@ -1354,6 +1409,26 @@ function Investments({ invs, accounts }: { invs: Inv[]; accounts: Account[] }) {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!contrib} onOpenChange={(o) => !o && setContrib(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="font-display">Aportar — {contrib?.name}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Valor do aporte</Label><Input type="number" step="0.01" value={contribAmt} onChange={e => setContribAmt(+e.target.value)} /></div>
+            <div><Label>Data</Label><Input type="date" value={contribDate} onChange={e => setContribDate(e.target.value)} /></div>
+            <div>
+              <Label>Conta de origem</Label>
+              <select value={contribAcc} onChange={e => setContribAcc(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                <option value="">Selecione a conta…</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">O valor sai do saldo desta conta e aparece no extrato como <strong>Transferência patrimonial</strong> — não conta como despesa.</p>
+            </div>
+            <Button onClick={applyContrib} className="w-full rounded-full">Confirmar aporte</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
       {!invs.length ? <EmptyState title="Sem investimentos" description="Registre seus investimentos para acompanhar o patrimônio." /> : (
         <div className="space-y-2">
           {invs.map(i => {
@@ -1375,6 +1450,9 @@ function Investments({ invs, accounts }: { invs: Inv[]; accounts: Account[] }) {
                   <div className="font-display text-lg">{fmtBRL(Number(i.current_amount))}</div>
                   <div className={`text-xs ${g >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{g >= 0 ? "+" : ""}{gp.toFixed(2)}%</div>
                 </div>
+                <Button size="sm" variant="secondary" className="rounded-full" onClick={() => setContrib(i)} disabled={!accounts.length} title={!accounts.length ? "Cadastre uma conta primeiro" : "Aportar debitando de uma conta"}>
+                  <Plus className="mr-1 h-3.5 w-3.5" />Aportar
+                </Button>
                 <Button size="sm" variant="secondary" className="rounded-full" onClick={() => setRedeem(i)} disabled={!accounts.length} title={!accounts.length ? "Cadastre uma conta primeiro" : "Resgatar para uma conta"}>
                   <ArrowRightLeft className="mr-1 h-3.5 w-3.5" />Resgatar
                 </Button>
