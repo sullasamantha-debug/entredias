@@ -1450,6 +1450,9 @@ function Investments({ invs, accounts }: { invs: Inv[]; accounts: Account[] }) {
                   <div className="font-display text-lg">{fmtBRL(Number(i.current_amount))}</div>
                   <div className={`text-xs ${g >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{g >= 0 ? "+" : ""}{gp.toFixed(2)}%</div>
                 </div>
+                <Button size="sm" variant="secondary" className="rounded-full" onClick={() => setContrib(i)} disabled={!accounts.length} title={!accounts.length ? "Cadastre uma conta primeiro" : "Aportar debitando de uma conta"}>
+                  <Plus className="mr-1 h-3.5 w-3.5" />Aportar
+                </Button>
                 <Button size="sm" variant="secondary" className="rounded-full" onClick={() => setRedeem(i)} disabled={!accounts.length} title={!accounts.length ? "Cadastre uma conta primeiro" : "Resgatar para uma conta"}>
                   <ArrowRightLeft className="mr-1 h-3.5 w-3.5" />Resgatar
                 </Button>
