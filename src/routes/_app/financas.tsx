@@ -1104,7 +1104,7 @@ function Jars({ jars, accounts }: { jars: Jar[]; accounts: Account[] }) {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">As reservas separam parte do saldo de uma conta para um objetivo. Elas não criam dinheiro novo nem somam ao patrimônio.</p>
+        <p className="text-xs text-muted-foreground">As reservas separam parte do seu dinheiro para um objetivo. Aportes saem do saldo da conta e entram na reserva — o dinheiro só muda de lugar dentro do patrimônio.</p>
         <Button onClick={() => { setEditing(null); setOpen(true); }} className="shrink-0 rounded-full"><Plus className="mr-1 h-4 w-4" />Nova reserva</Button>
       </div>
 
