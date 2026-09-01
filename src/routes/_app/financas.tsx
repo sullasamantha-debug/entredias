@@ -1409,6 +1409,26 @@ function Investments({ invs, accounts }: { invs: Inv[]; accounts: Account[] }) {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!contrib} onOpenChange={(o) => !o && setContrib(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="font-display">Aportar — {contrib?.name}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Valor do aporte</Label><Input type="number" step="0.01" value={contribAmt} onChange={e => setContribAmt(+e.target.value)} /></div>
+            <div><Label>Data</Label><Input type="date" value={contribDate} onChange={e => setContribDate(e.target.value)} /></div>
+            <div>
+              <Label>Conta de origem</Label>
+              <select value={contribAcc} onChange={e => setContribAcc(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                <option value="">Selecione a conta…</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">O valor sai do saldo desta conta e aparece no extrato como <strong>Transferência patrimonial</strong> — não conta como despesa.</p>
+            </div>
+            <Button onClick={applyContrib} className="w-full rounded-full">Confirmar aporte</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
       {!invs.length ? <EmptyState title="Sem investimentos" description="Registre seus investimentos para acompanhar o patrimônio." /> : (
         <div className="space-y-2">
           {invs.map(i => {
