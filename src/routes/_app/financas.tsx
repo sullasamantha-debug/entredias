@@ -320,7 +320,7 @@ function Overview({ fins, budgets, cards, accounts, jars, invs, accountsTotal, t
               <div className="flex items-center gap-2 font-display text-lg"><PiggyBank className="h-4 w-4 text-primary" />Distribuição por reserva</div>
               <span className="text-sm text-muted-foreground">{fmtBRL(totalJars)}</span>
             </div>
-            <p className="mb-3 text-xs text-muted-foreground">As reservas separam parte do saldo das contas — não somam ao patrimônio.</p>
+            <p className="mb-3 text-xs text-muted-foreground">O aporte sai do saldo da conta e fica guardado na reserva — o dinheiro continua dentro do seu patrimônio.</p>
             <div className="space-y-3">
               {jars.map(j => {
                 const cur = Number(j.current_amount);
@@ -1920,7 +1920,7 @@ function PatrimonyAudit({ accounts, fins, invs, jars, accountsTotal, totalInvs, 
         <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
           <DialogHeader><DialogTitle>Como foi calculado seu patrimônio</DialogTitle></DialogHeader>
           <div className="space-y-5 text-sm">
-            <p className="text-muted-foreground">Seu patrimônio soma o saldo real de todas as contas com o valor investido. Reservas não somam — elas apenas separam parte do saldo das contas.</p>
+            <p className="text-muted-foreground">Seu patrimônio soma o saldo real das contas, o valor guardado nas reservas e o valor investido. Aportes e resgates apenas movem o dinheiro entre esses lugares, sem alterar o total.</p>
 
             <section className="cozy-card p-4">
               <div className="mb-2 flex items-center justify-between font-display text-base"><span className="flex items-center gap-2"><Wallet className="h-4 w-4 text-primary" /> Saldo em contas</span><span>{fmtBRL(accountsTotal)}</span></div>
