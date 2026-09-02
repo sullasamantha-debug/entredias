@@ -320,7 +320,7 @@ function Overview({ fins, budgets, cards, accounts, jars, invs, accountsTotal, t
               <div className="flex items-center gap-2 font-display text-lg"><PiggyBank className="h-4 w-4 text-primary" />Distribuição por reserva</div>
               <span className="text-sm text-muted-foreground">{fmtBRL(totalJars)}</span>
             </div>
-            <p className="mb-3 text-xs text-muted-foreground">As reservas separam parte do saldo das contas — não somam ao patrimônio.</p>
+            <p className="mb-3 text-xs text-muted-foreground">O aporte sai do saldo da conta e fica guardado na reserva — o dinheiro continua dentro do seu patrimônio.</p>
             <div className="space-y-3">
               {jars.map(j => {
                 const cur = Number(j.current_amount);
