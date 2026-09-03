@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { fmtBRL, invoiceMonthFor, labelMonth, monthKey } from "@/lib/finance";
 import { formatDateBR } from "@/lib/dates";
 import { suggestCategory, memoPattern, type SuggestionRule } from "@/lib/ofx";
-import { extractPdfLines, parsePdfStatement, type PdfTx } from "@/lib/pdf-statement";
+import { extractPdfLines, parsePdfStatement, isNonTransactionText, type PdfTx } from "@/lib/pdf-statement";
 import { OFXImportButton } from "@/components/OFXImport";
 import {
   detectApplication, resolveTargets, applyPatrimonyEffects, patLabelFor, patFinanceRow, patFlowLabel,
@@ -134,7 +134,8 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
           targetId: "",
           newName: "",
           appHint: app.isApplication && !isCardPay,
-          ignore: false,
+          // Linhas de saldo/total que escaparem do parser entram já ignoradas
+          ignore: isNonTransactionText(t.description),
           duplicate: !!hit,
           duplicateId: hit?.id ?? null,
           duplicateAction: "skip",

@@ -97,6 +97,15 @@ const MONTHS: Record<string, number> = {
 const DEBIT_HINTS = /\b(d[eé]bito|pagamento|pago|compra|saque|tarifa|taxa|iof|juros|boleto|envio|enviad[oa]|transfer[eê]ncia enviada|pix enviado|debit)\b/i;
 const CREDIT_HINTS = /\b(cr[eé]dito|recebid[oa]|recebimento|dep[oó]sito|entrada|estorno|reembolso|rendimento|salario|sal[aá]rio|pix recebido|transfer[eê]ncia recebida)\b/i;
 
+/** Linhas de saldo (não são movimentação) — informam apenas o saldo de referência. */
+export const BALANCE_RE = /^saldo\b(\s*(anterior|inicial|final|atual|do\s+dia|da\s+conta|em\s+conta|dispon[íi]vel|total|bloqueado|\(r\$\)|r\$|:|em\s+\d))?/i;
+/** Linhas de totalizador/resumo — descartadas sem alterar o saldo de referência. */
+export const NON_TX_RE = /^(total(\s+(de|dos|das|geral))?\b|subtotal\b|resumo\b|somat[óo]rio\b|entradas\s+e\s+sa[íi]das\b)/i;
+
+/** true quando a linha/descrição é saldo ou totalizador, não um lançamento. */
+export const isNonTransactionText = (text: string) =>
+  BALANCE_RE.test((text || "").trim()) || NON_TX_RE.test((text || "").trim());
+
 /** Parse statement lines into transactions. */
 export function parsePdfStatement(lines: string[]): PdfStatement {
   const joined = lines.join("\n");
@@ -129,11 +138,19 @@ export function parsePdfStatement(lines: string[]): PdfStatement {
   for (const rawLine of lines) {
     const line = rawLine.replace(/\u00a0/g, " ").trim();
     if (!line) continue;
-    if (/^(saldo\s+(anterior|inicial|final|do\s+dia|em\s+conta))/i.test(line)) {
-      const amts = [...line.matchAll(AMOUNT_RE)];
-      if (amts.length) prevBalance = parseAmount(amts[amts.length - 1][1]).value * (parseAmount(amts[amts.length - 1][1]).negative ? -1 : 1);
+    const lastAmountOf = (text: string) => {
+      const amts = [...text.matchAll(AMOUNT_RE)];
+      if (!amts.length) return null;
+      const p = parseAmount(amts[amts.length - 1][1]);
+      return p.negative ? -p.value : p.value;
+    };
+    if (BALANCE_RE.test(line)) {
+      const bal = lastAmountOf(line);
+      if (bal !== null) prevBalance = bal;
       continue;
     }
+    if (NON_TX_RE.test(line)) continue;
+
 
     // date at start: dd/mm/yyyy, dd/mm, or "12 fev"
     let d: number | null = null, m: number | null = null, y: number | null = null;
@@ -145,7 +162,18 @@ export function parsePdfStatement(lines: string[]): PdfStatement {
       if (mm) { d = +mm[1]; m = MONTHS[mm[2].toLowerCase().slice(0, 3)]; rest = mm[3]; }
     }
 
+    // "01/09/2026 SALDO DO DIA 1.234,56" → saldo, não lançamento
+    if (d !== null && m !== null) {
+      if (BALANCE_RE.test(rest)) {
+        const bal = lastAmountOf(rest);
+        if (bal !== null) prevBalance = bal;
+        continue;
+      }
+      if (NON_TX_RE.test(rest)) continue;
+    }
+
     const amounts = [...rest.matchAll(AMOUNT_RE)];
+
 
     if (d === null || m === null || !amounts.length) {
       // continuation line: append to previous description when it carries no amounts
