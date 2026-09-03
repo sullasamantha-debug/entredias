@@ -162,7 +162,18 @@ export function parsePdfStatement(lines: string[]): PdfStatement {
       if (mm) { d = +mm[1]; m = MONTHS[mm[2].toLowerCase().slice(0, 3)]; rest = mm[3]; }
     }
 
+    // "01/09/2026 SALDO DO DIA 1.234,56" → saldo, não lançamento
+    if (d !== null && m !== null) {
+      if (BALANCE_RE.test(rest)) {
+        const bal = lastAmountOf(rest);
+        if (bal !== null) prevBalance = bal;
+        continue;
+      }
+      if (NON_TX_RE.test(rest)) continue;
+    }
+
     const amounts = [...rest.matchAll(AMOUNT_RE)];
+
 
     if (d === null || m === null || !amounts.length) {
       // continuation line: append to previous description when it carries no amounts
