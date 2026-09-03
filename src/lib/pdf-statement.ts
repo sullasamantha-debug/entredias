@@ -138,11 +138,19 @@ export function parsePdfStatement(lines: string[]): PdfStatement {
   for (const rawLine of lines) {
     const line = rawLine.replace(/\u00a0/g, " ").trim();
     if (!line) continue;
-    if (/^(saldo\s+(anterior|inicial|final|do\s+dia|em\s+conta))/i.test(line)) {
-      const amts = [...line.matchAll(AMOUNT_RE)];
-      if (amts.length) prevBalance = parseAmount(amts[amts.length - 1][1]).value * (parseAmount(amts[amts.length - 1][1]).negative ? -1 : 1);
+    const lastAmountOf = (text: string) => {
+      const amts = [...text.matchAll(AMOUNT_RE)];
+      if (!amts.length) return null;
+      const p = parseAmount(amts[amts.length - 1][1]);
+      return p.negative ? -p.value : p.value;
+    };
+    if (BALANCE_RE.test(line)) {
+      const bal = lastAmountOf(line);
+      if (bal !== null) prevBalance = bal;
       continue;
     }
+    if (NON_TX_RE.test(line)) continue;
+
 
     // date at start: dd/mm/yyyy, dd/mm, or "12 fev"
     let d: number | null = null, m: number | null = null, y: number | null = null;
