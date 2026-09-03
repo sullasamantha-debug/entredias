@@ -227,8 +227,11 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
               installments: 1,
               notes,
               paid: true,
-              account_id: account.id,
-              to_account_id: r.kind === "transfer" ? (r.toAccountId || null) : null,
+              // In a transfer, the imported account is the destination when money came IN
+              account_id: r.kind === "transfer" && r.type === "CREDIT" ? (r.toAccountId || null) : account.id,
+              to_account_id: r.kind === "transfer"
+                ? (r.type === "CREDIT" ? account.id : (r.toAccountId || null))
+                : null,
               ofx_import_id: imp.id,
             };
         if (r.duplicate && r.duplicateAction === "update" && r.duplicateId) {
