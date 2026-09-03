@@ -227,8 +227,11 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
               installments: 1,
               notes,
               paid: true,
-              account_id: account.id,
-              to_account_id: r.kind === "transfer" ? (r.toAccountId || null) : null,
+              // In a transfer, the imported account is the destination when money came IN
+              account_id: r.kind === "transfer" && r.type === "CREDIT" ? (r.toAccountId || null) : account.id,
+              to_account_id: r.kind === "transfer"
+                ? (r.type === "CREDIT" ? account.id : (r.toAccountId || null))
+                : null,
               ofx_import_id: imp.id,
             };
         if (r.duplicate && r.duplicateAction === "update" && r.duplicateId) {
@@ -363,11 +366,21 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
                     </div>
                     <div className="min-w-[170px]">
                       {r.kind === "transfer" ? (
-                        <select value={r.toAccountId} onChange={e => updateRow(i, { toAccountId: e.target.value })}
-                          className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs">
-                          <option value="">Conta destino…</option>
-                          {accounts.filter(a => a.id !== account.id).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                        </select>
+                        <div className="space-y-1">
+                          <select value={r.toAccountId} onChange={e => updateRow(i, { toAccountId: e.target.value })}
+                            className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs">
+                            <option value="">{r.type === "CREDIT" ? "Conta de origem…" : "Conta destino…"}</option>
+                            {accounts.filter(a => a.id !== account.id).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                          </select>
+                          {(() => {
+                            const other = accounts.find(a => a.id === r.toAccountId)?.name ?? (r.type === "CREDIT" ? "origem" : "destino");
+                            return (
+                              <div className="text-[10px] text-muted-foreground">
+                                {r.type === "CREDIT" ? `${other} → ${account.name}` : `${account.name} → ${other}`}
+                              </div>
+                            );
+                          })()}
+                        </div>
                       ) : r.kind === "card_payment" ? (
                         <div className="space-y-1">
                           <select value={r.cardId} onChange={e => updateRow(i, { cardId: e.target.value })}
