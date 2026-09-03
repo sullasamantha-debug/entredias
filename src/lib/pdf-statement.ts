@@ -97,6 +97,15 @@ const MONTHS: Record<string, number> = {
 const DEBIT_HINTS = /\b(d[eé]bito|pagamento|pago|compra|saque|tarifa|taxa|iof|juros|boleto|envio|enviad[oa]|transfer[eê]ncia enviada|pix enviado|debit)\b/i;
 const CREDIT_HINTS = /\b(cr[eé]dito|recebid[oa]|recebimento|dep[oó]sito|entrada|estorno|reembolso|rendimento|salario|sal[aá]rio|pix recebido|transfer[eê]ncia recebida)\b/i;
 
+/** Linhas de saldo (não são movimentação) — informam apenas o saldo de referência. */
+export const BALANCE_RE = /^saldo\b(\s*(anterior|inicial|final|atual|do\s+dia|da\s+conta|em\s+conta|dispon[íi]vel|total|bloqueado|\(r\$\)|r\$|:|em\s+\d))?/i;
+/** Linhas de totalizador/resumo — descartadas sem alterar o saldo de referência. */
+export const NON_TX_RE = /^(total(\s+(de|dos|das|geral))?\b|subtotal\b|resumo\b|somat[óo]rio\b|entradas\s+e\s+sa[íi]das\b)/i;
+
+/** true quando a linha/descrição é saldo ou totalizador, não um lançamento. */
+export const isNonTransactionText = (text: string) =>
+  BALANCE_RE.test((text || "").trim()) || NON_TX_RE.test((text || "").trim());
+
 /** Parse statement lines into transactions. */
 export function parsePdfStatement(lines: string[]): PdfStatement {
   const joined = lines.join("\n");
