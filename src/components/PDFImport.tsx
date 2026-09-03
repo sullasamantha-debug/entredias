@@ -366,11 +366,21 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
                     </div>
                     <div className="min-w-[170px]">
                       {r.kind === "transfer" ? (
-                        <select value={r.toAccountId} onChange={e => updateRow(i, { toAccountId: e.target.value })}
-                          className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs">
-                          <option value="">Conta destino…</option>
-                          {accounts.filter(a => a.id !== account.id).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                        </select>
+                        <div className="space-y-1">
+                          <select value={r.toAccountId} onChange={e => updateRow(i, { toAccountId: e.target.value })}
+                            className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs">
+                            <option value="">{r.type === "CREDIT" ? "Conta de origem…" : "Conta destino…"}</option>
+                            {accounts.filter(a => a.id !== account.id).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                          </select>
+                          {(() => {
+                            const other = accounts.find(a => a.id === r.toAccountId)?.name ?? (r.type === "CREDIT" ? "origem" : "destino");
+                            return (
+                              <div className="text-[10px] text-muted-foreground">
+                                {r.type === "CREDIT" ? `${other} → ${account.name}` : `${account.name} → ${other}`}
+                              </div>
+                            );
+                          })()}
+                        </div>
                       ) : r.kind === "card_payment" ? (
                         <div className="space-y-1">
                           <select value={r.cardId} onChange={e => updateRow(i, { cardId: e.target.value })}
