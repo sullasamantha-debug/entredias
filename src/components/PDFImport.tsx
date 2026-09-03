@@ -134,7 +134,8 @@ export function PDFImportButton({ account, accounts, cats, cards = [], asItem = 
           targetId: "",
           newName: "",
           appHint: app.isApplication && !isCardPay,
-          ignore: false,
+          // Linhas de saldo/total que escaparem do parser entram já ignoradas
+          ignore: isNonTransactionText(t.description),
           duplicate: !!hit,
           duplicateId: hit?.id ?? null,
           duplicateAction: "skip",
