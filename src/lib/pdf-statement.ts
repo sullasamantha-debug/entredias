@@ -94,8 +94,8 @@ const MONTHS: Record<string, number> = {
   jul: 7, ago: 8, set: 9, out: 10, nov: 11, dez: 12,
 };
 
-const DEBIT_HINTS = /\b(d[eé]bito|pagamento|pago|compra|saque|tarifa|taxa|iof|juros|boleto|envio|enviad[oa]|transfer[eê]ncia enviada|pix enviado|debit)\b/i;
-const CREDIT_HINTS = /\b(cr[eé]dito|recebid[oa]|recebimento|dep[oó]sito|entrada|estorno|reembolso|rendimentos?|rend\.|rend\b|remunera[çc][ãa]o|juros|dividendos?|cashback|corre[çc][ãa]o\s+monet|salario|sal[aá]rio|pix recebido|transfer[eê]ncia recebida)/i;
+const DEBIT_HINTS = /\b(d[eé]bito|pagamento|pago|compra|saque|tarifa|taxa|iof|boleto|envio|enviad[oa]|transfer[eê]ncia enviada|pix enviado|aplica[çc][ãa]o|aplic\.|aporte|debit)\b/i;
+const CREDIT_HINTS = /\b(cr[eé]dito|recebid[oa]|recebimento|dep[oó]sito|entrada|estorno|reembolso|rendimentos?|rend\.|rend\b|remunera[çc][ãa]o|juros|dividendos?|cashback|corre[çc][ãa]o\s+monet|salario|sal[aá]rio|pix recebido|transfer[eê]ncia recebida|resgates?|retirada|saque\s+de\s+aplica|liquida[çc][ãa]o)/i;
 
 /** Linhas de saldo (não são movimentação) — informam apenas o saldo de referência. */
 export const BALANCE_RE = /^saldo\b(\s*(anterior|inicial|final|atual|do\s+dia|da\s+conta|em\s+conta|dispon[íi]vel|total|bloqueado|\(r\$\)|r\$|:|em\s+\d))?/i;
