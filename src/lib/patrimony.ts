@@ -31,8 +31,13 @@ export function detectApplication(description: string, type: "CREDIT" | "DEBIT")
   const redeem = REDEEM_RE.test(text) || type === "CREDIT";
   const jar = JAR_RE.test(text);
   const inv = INV_RE.test(text);
-  // Sem certeza sobre o destino → não assumir; apenas sinalizar.
-  if (jar === inv) return { isApplication: true, suggested: null };
+  // Ambos (ou nenhum) os destinos combinam: aplicações automáticas e resgates genéricos
+  // costumam ser investimento; se nem isso, apenas sinalizar sem sugerir.
+  if (jar && inv) return { isApplication: true, suggested: null };
+  if (!jar && !inv) {
+    const generic = /aplica[çc][ãa]o|aplic\.|resgate|aporte/i.test(text);
+    return { isApplication: true, suggested: generic ? (redeem ? "invest_out" : "invest_in") : null };
+  }
   if (jar) return { isApplication: true, suggested: redeem ? "jar_withdraw" : "jar_deposit" };
   return { isApplication: true, suggested: redeem ? "invest_out" : "invest_in" };
 }
