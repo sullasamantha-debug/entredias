@@ -94,7 +94,7 @@ const BUILTIN_RULES: { pattern: RegExp; category: string; cat_type: "despesa" | 
   { pattern: /aluguel|condom[ií]nio|iptu|luz|energia|enel|cemig|copel|sabesp|comgas|vivo|claro|tim|oi\b|net\b|internet/i, category: "Contas", cat_type: "despesa" },
   { pattern: /pagamento fatura|pgto fatura|pag\.?\s*fatura|pagto cart[aã]o|pagamento cart[aã]o/i, category: "Pagamento de Fatura", cat_type: "despesa" },
   { pattern: /sal[aá]rio|folha|proventos|remunera[cç][aã]o/i, category: "Salário", cat_type: "receita" },
-  { pattern: /rendimento|juros|dividendo|yield/i, category: "Rendimentos", cat_type: "receita" },
+  { pattern: /rendimentos?|\brend\.|\brend\b|remunera[çc][ãa]o|juros|dividendos?|cashback|corre[çc][ãa]o\s+monet|yield/i, category: "Rendimentos", cat_type: "receita" },
   { pattern: /pix\s+receb|ted\s+receb|doc\s+receb|transf\s+receb/i, category: "Transferência", cat_type: "receita" },
   { pattern: /reembolso|estorno/i, category: "Reembolso", cat_type: "receita" },
 ];
