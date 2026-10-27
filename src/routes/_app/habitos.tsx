@@ -215,7 +215,7 @@ function HabitosPage() {
                       return (
                         <Button key={k} variant="ghost" disabled={future || pending.has(`${h.id}:${k}`)} onClick={() => toggle(h.id, k)}
                           aria-label={`${h.name}, ${format(d, "dd/MM/yyyy")}`} aria-pressed={done} aria-busy={pending.has(`${h.id}:${k}`)}
-                          className={`group relative aspect-square rounded-xl border text-xs transition ${
+                          className={`group relative h-auto w-full aspect-square rounded-xl border p-0 text-xs transition ${
                             done ? "border-transparent text-primary-foreground" : "border-border hover:border-primary"
                           } ${!inMonth ? "opacity-30" : ""} ${future ? "cursor-not-allowed opacity-30" : ""}`}
                           style={done ? { background: color } : undefined}>
