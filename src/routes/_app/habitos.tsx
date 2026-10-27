@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,8 +18,19 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { localDateKey, parseDateOnly } from "@/lib/dates";
+import { collectPages } from "@/lib/pagination";
 
-export const Route = createFileRoute("/_app/habitos")({ component: HabitosPage });
+export const Route = createFileRoute("/_app/habitos")({
+  component: HabitosPage,
+  head: () => ({ meta: [
+    { title: "Hábitos | Entre dias" },
+    { name: "description", content: "Seus hábitos e o histórico dos seus rituais no Entre dias." },
+    { property: "og:title", content: "Hábitos | Entre dias" },
+    { property: "og:description", content: "Seus hábitos e o histórico dos seus rituais no Entre dias." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
+});
 
 const COLORS = ["#7dd3fc", "#fda4af", "#86efac", "#fcd34d", "#c4b5fd", "#fdba74", "#f0abfc", "#a3e635"];
 const empty = () => ({ name: "", color: COLORS[0] });
@@ -35,6 +46,8 @@ function HabitosPage() {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [form, setForm] = useState(empty());
   const [cursor, setCursor] = useState(new Date());
+  const pendingRef = useRef(new Set<string>());
+  const [pending, setPending] = useState(new Set<string>());
   const today = new Date();
 
   useEffect(() => {
@@ -42,14 +55,15 @@ function HabitosPage() {
     setForm(editing ? { name: editing.name, color: editing.color ?? COLORS[0] } : empty());
   }, [open, editing]);
 
-  const { data } = useQuery({
+  const { data, isPending, error: loadError, refetch } = useQuery({
     enabled: !!user, queryKey: ["habits", user?.id],
     queryFn: async () => {
       const [h, logs] = await Promise.all([
         supabase.from("habits").select("*").eq("archived", false).order("created_at"),
-        supabase.from("habit_logs").select("*"),
+        collectPages<Log>((from, to) => supabase.from("habit_logs").select("*").order("date").order("id").range(from, to)),
       ]);
-      return { habits: (h.data ?? []) as Habit[], logs: (logs.data ?? []) as Log[] };
+      if (h.error) throw new Error(h.error.message);
+      return { habits: (h.data ?? []) as Habit[], logs };
     },
   });
 
@@ -66,11 +80,24 @@ function HabitosPage() {
   const toggle = async (habitId: string, date: string) => {
     if (!user || !data) return;
     if (isAfter(parseDateOnly(date), today)) return;
-    const existing = data.logs.find((l) => l.habit_id === habitId && l.date === date);
-    if (existing) await supabase.from("habit_logs").delete().eq("id", existing.id);
-    else await supabase.from("habit_logs").insert({ habit_id: habitId, date, user_id: user.id, done: true });
-    qc.invalidateQueries({ queryKey: ["habits"] });
-    qc.invalidateQueries({ queryKey: ["dashboard"] });
+    const key = `${habitId}:${date}`;
+    if (pendingRef.current.has(key)) return;
+    pendingRef.current.add(key);
+    setPending(new Set(pendingRef.current));
+    try {
+      const existing = data.logs.find((l) => l.habit_id === habitId && l.date === date && l.done);
+      const { error } = existing
+        ? await supabase.from("habit_logs").delete().eq("habit_id", habitId).eq("date", date)
+        : await supabase.from("habit_logs").upsert({ habit_id: habitId, date, user_id: user.id, done: true }, { onConflict: "habit_id,date" });
+      if (error) throw new Error(error.message);
+      await qc.invalidateQueries({ queryKey: ["habits", user.id] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    } catch {
+      toast.error("Não foi possível salvar a marcação. Tente novamente.");
+    } finally {
+      pendingRef.current.delete(key);
+      setPending(new Set(pendingRef.current));
+    }
   };
 
   const remove = async () => {
@@ -140,7 +167,14 @@ function HabitosPage() {
         <div className="text-xs text-muted-foreground hidden md:block">Clique em qualquer dia para marcar (retroativo)</div>
       </div>
 
-      {!data?.habits.length ? (
+      {loadError ? (
+        <div role="alert" className="space-y-3 text-sm text-destructive">
+          <p>Não foi possível carregar seus hábitos.</p>
+          <Button variant="outline" onClick={() => refetch()}>Tentar novamente</Button>
+        </div>
+      ) : isPending ? (
+        <p role="status" className="text-sm text-muted-foreground">Carregando hábitos…</p>
+      ) : !data?.habits.length ? (
         <EmptyState title="Crie seu primeiro hábito" description="Beber água, dormir cedo, ler 10 min..." />
       ) : (
         <div className="space-y-5">
@@ -179,14 +213,15 @@ function HabitosPage() {
                       const isToday = isSameDay(d, today);
                       const done = data.logs.some((l) => l.habit_id === h.id && l.date === k && l.done);
                       return (
-                        <button key={k} disabled={future} onClick={() => toggle(h.id, k)}
+                        <Button key={k} variant="ghost" disabled={future || pending.has(`${h.id}:${k}`)} onClick={() => toggle(h.id, k)}
+                          aria-label={`${h.name}, ${format(d, "dd/MM/yyyy")}`} aria-pressed={done} aria-busy={pending.has(`${h.id}:${k}`)}
                           className={`group relative aspect-square rounded-xl border text-xs transition ${
-                            done ? "border-transparent text-white" : "border-border hover:border-primary"
+                            done ? "border-transparent text-primary-foreground" : "border-border hover:border-primary"
                           } ${!inMonth ? "opacity-30" : ""} ${future ? "cursor-not-allowed opacity-30" : ""}`}
                           style={done ? { background: color } : undefined}>
                           <span className={`font-display ${isToday && !done ? "text-primary font-bold" : ""}`}>{format(d, "d")}</span>
                           {done && <Check className="absolute right-1 top-1 h-3 w-3" />}
-                        </button>
+                        </Button>
                       );
                     })}
                   </div>
